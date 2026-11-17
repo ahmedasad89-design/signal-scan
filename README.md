@@ -45,11 +45,12 @@ curl -fsSL https://raw.githubusercontent.com/ahmedasad89-design/signal-scan/main
 ## What it shows
 
 1. **The field.** Every signal around your Mac, as waves. Where a signal sits is not its real direction (a laptop cannot sense direction); it is a picture of strength, not of any harm.
-2. **Your seat.** Your own connection against the background noise, and whether your channel is crowded.
+2. **Your seat.** Your own connection against the background noise, and whether your channel is crowded. Below it, a running chart of everything since you opened the page, with what came and went: routers in and out of range, your Mac switching bands, devices joining your network.
 3. **The spectrum.** Each router as a shape on its band: how wide a slice of the airwaves it takes and how loud it is.
 4. **Quieter channels.** How busy each channel is with other people's routers, so you can pick a calmer one.
-5. **The register.** Every router, Bluetooth device and network device, with its maker.
-6. **Your body.** What reaches you compared with the international exposure limit, and what the research says about sleep, headaches and thinking, with sources. It includes a blind sleep trial you can run at home.
+5. **The register.** Every router, Bluetooth device and network device, with its maker. Bluetooth devices are sorted into kinds (trackers, audio, phones and computers, and so on), and trackers are picked out (see below).
+6. **Room by room.** Carry the Mac to the bed, the desk, the sofa, and measure each spot for half a minute. The spots are ranked quietest first, with how much of each comes from your own Wi-Fi.
+7. **Your body.** What reaches you compared with the international exposure limit, and how much of it is your own Wi-Fi, your neighbours' or Bluetooth. Then what the research says about sleep, headaches and thinking, with sources, and a blind sleep trial you can run at home.
 
 ![The spectrum chapter](docs/spectrum.jpg)
 
@@ -58,7 +59,16 @@ curl -fsSL https://raw.githubusercontent.com/ahmedasad89-design/signal-scan/main
 - The app talks to nothing outside your Mac. Its page is served on `127.0.0.1` only, and it refuses requests from other sites.
 - The installer makes two downloads: this source from GitHub, and the public list of device makers from the IEEE.
 - It only searches a network for devices after you mark that network as your own (see below).
-- Readings are not stored. The app remembers only which routers you marked as your own; the sleep trial is kept in your browser's storage on this Mac.
+- Readings are not stored. The app remembers only which routers you marked as your own. The sleep trial and the spots you save in Room by room are kept in your browser's storage on this Mac; the running chart lives only as long as the page is open.
+
+## Trackers
+
+The register names the trackers it hears: AirTags and other tags on Apple's Find My network, Samsung SmartTags, Tiles, Chipolos, Pebblebees and tags on Google's Find Hub network. The formats come from [AirGuard](https://github.com/seemoo-lab/AirGuard), the open-source tracker detector from TU Darmstadt.
+
+- An AirTag, a SmartTag or a Find Hub tag says in its broadcast when it has been away from its owner for a while. Those are marked, and if one stays near the Mac for half an hour, heard about as strongly as something in the same room, the page says so at the top. A faint one through a wall is most likely a neighbour's.
+- A Tile, Chipolo or Pebblebee does not say whether its owner is nearby, so it is listed but never flagged.
+- A flagged tag is often innocent: one left at home by someone who has gone out. If nobody in your home owns it, your phone can confirm it (an iPhone warns about unknown AirTags by itself; Android has a manual scan under Unknown tracker alerts).
+- **This part is new.** It has been tested against the published formats, not yet against every make of tag.
 
 ## Hearing your own devices
 

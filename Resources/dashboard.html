@@ -110,6 +110,7 @@
   }
   .pill:hover, .pill:focus-visible { color: var(--bg); background: var(--paper); border-color: var(--paper); outline: none; }
   .pill[disabled] { opacity: 0.5; cursor: default; }
+  .pill[hidden] { display: none; }
   .stage-note { max-width: 80ch; margin: 0 auto; padding: 30px var(--pad) 0; font: italic 15px/1.65 var(--serif); color: var(--dim); text-align: center; }
   @media (max-width: 900px) { .hud-tr { display: none; } }
   @media (max-width: 600px) { .hud-bl .hint, .hud-tl .hint { display: none; } .stage-actions .pill:first-child { display: none; } }
@@ -322,6 +323,78 @@
   }
   footer p { max-width: 70ch; }
 
+  /* ---------- since you opened the page ---------- */
+  .since { margin-top: clamp(72px, 11vh, 120px); padding-top: 20px; border-top: 1px solid var(--hair2); }
+  .since-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 48px; align-items: end; }
+  .since-head { margin: 14px 0 10px; font: 400 clamp(28px, 2.6vw, 38px)/1.12 var(--serif); letter-spacing: -0.005em; }
+  .since-head em { margin-left: 0.3em; font: 500 0.48em/1 var(--mono); font-style: normal; letter-spacing: 0.02em; color: var(--ink2); vertical-align: 0.4em; white-space: nowrap; }
+  .since-text { max-width: 72ch; color: var(--ink2); font-size: 14.5px; }
+  .key { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; padding: 0 0 4px; list-style: none; font: 11px/1.5 var(--mono); color: var(--ink2); }
+  .key li { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
+  .key i.ln { flex: none; width: 18px; height: 2px; border-radius: 1px; }
+  .key i.ln.dash { height: 1px; background: repeating-linear-gradient(90deg, rgba(239, 233, 221, 0.5) 0 4px, transparent 4px 7px); }
+  .since-plot { position: relative; height: clamp(210px, 28vh, 280px); margin-top: 24px; cursor: crosshair; outline: none; }
+  .since-plot:focus-visible { box-shadow: 0 0 0 1px var(--hair2); }
+  .since-plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .log { list-style: none; margin: 14px 0 0; padding: 0; max-width: 900px; }
+  .log li { display: grid; grid-template-columns: 50px 14px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--hair); color: var(--ink2); font-size: 13.5px; }
+  .log time { font: 500 11px/1.4 var(--mono); color: var(--dim); }
+  .log .glyph { align-self: center; }
+  .log .rule { align-self: center; width: 10px; height: 1px; background: var(--ink2); }
+  .log .warn { color: var(--warn); }
+  .since-more { margin-top: 14px; }
+  @media (max-width: 640px) { .since-top { grid-template-columns: 1fr; } }
+
+  /* ---------- room by room ---------- */
+  .rooms { display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); gap: clamp(36px, 6vw, 96px); align-items: start; }
+  .take, .spots-box { padding-top: 18px; border-top: 1px solid var(--hair2); }
+  .take h3 { margin: 14px 0 12px; font: italic 400 clamp(30px, 3vw, 44px)/1.05 var(--display); }
+  .take p { max-width: 46ch; color: var(--ink2); font-size: 14.5px; }
+  .take .fine { margin-top: 20px; color: var(--dim); font-size: 13px; }
+  .take .row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 22px; }
+  .take .pick { margin-top: 12px; }
+  .take .pill.solid { color: var(--bg); background: var(--paper); border-color: var(--paper); }
+  .take .pill.solid:hover, .take .pill.solid:focus-visible { color: var(--paper); background: transparent; }
+  .take .pill[disabled] { opacity: 0.35; pointer-events: none; }
+  .line-in { width: min(100%, 360px); padding: 6px 2px; border: 0; border-bottom: 1px solid var(--hair2); border-radius: 0; background: none; color: var(--paper); font: 400 19px/1.3 var(--serif); outline: none; }
+  .line-in::placeholder { color: var(--dim); opacity: 0.75; }
+  .line-in:focus { border-bottom-color: var(--paper); }
+  .count-down { margin: 6px 0 4px; font: 400 clamp(72px, 8vw, 116px)/0.9 var(--display); letter-spacing: -0.02em; font-variant-numeric: lining-nums; }
+  .count-down small { margin-left: 12px; font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .meter { position: relative; max-width: 420px; height: 1px; margin: 22px 0 18px; background: var(--hair2); }
+  .meter i { position: absolute; left: 0; top: -1.5px; width: 0; height: 4px; border-radius: 2px; background: var(--paper); box-shadow: 0 0 12px rgba(239, 233, 221, 0.35); transition: width 1s linear; }
+  .spots-head { max-width: 24ch; margin: 14px 0 12px; font: 400 clamp(30px, 3.2vw, 46px)/1.08 var(--display); letter-spacing: -0.012em; }
+  .spots-head em { font-style: italic; }
+  .spots-sub { max-width: 62ch; color: var(--ink2); font-size: 14.5px; }
+  .spots-box .key { margin-top: 24px; }
+  .spots { list-style: none; margin: 12px 0 0; padding: 0; }
+  .spots li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px 16px; align-items: baseline; padding: 16px 0 14px; border-top: 1px solid var(--hair); }
+  .spots .rk { font: 500 10.5px/1 var(--mono); color: var(--dim); }
+  .spots .nm { font: 400 21px/1.2 var(--serif); overflow-wrap: anywhere; }
+  .spots .v { font: 500 12.5px/1 var(--mono); color: var(--paper); white-space: nowrap; }
+  .spots .stack { grid-column: 2 / 4; display: flex; gap: 2px; height: 6px; transition: width 1.2s var(--ease); }
+  .spots .stack i { display: block; height: 100%; min-width: 2px; border-radius: 2px; }
+  .spots .dt { grid-column: 2 / 4; font: 11.5px/1.55 var(--mono); color: var(--dim); }
+  .spots .tlink { grid-column: 2 / 4; justify-self: start; }
+  .spots-fine { max-width: 66ch; margin-top: 22px; color: var(--dim); font-size: 13px; }
+  @media (max-width: 900px) { .rooms { grid-template-columns: 1fr; } }
+
+  /* ---------- where it comes from ---------- */
+  .share { margin-top: clamp(56px, 8vh, 88px); padding-top: 20px; border-top: 1px solid var(--hair2); }
+  .share-head { max-width: 24ch; margin: 14px 0 28px; font: 400 clamp(30px, 3.4vw, 50px)/1.06 var(--display); letter-spacing: -0.012em; }
+  .share-head em { font-style: italic; }
+  .share-bar { display: flex; gap: 3px; height: 10px; }
+  .share-bar i { display: block; height: 100%; min-width: 3px; border-radius: 2px; transition: flex-grow 1.2s var(--ease); }
+  .share-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 36px; margin: 18px 0 0; padding: 0; list-style: none; }
+  .share-rows li { padding: 14px 0; border-top: 1px solid var(--hair); }
+  .share-rows .lb { display: flex; align-items: center; gap: 9px; font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink2); }
+  .share-rows .pc { display: block; margin: 10px 0 6px; font: 400 clamp(36px, 3.2vw, 48px)/1 var(--display); font-variant-numeric: lining-nums; }
+  .share-rows .dt { display: block; font: 11.5px/1.55 var(--mono); color: var(--dim); overflow-wrap: anywhere; }
+  .share-note { max-width: 76ch; margin-top: 18px; color: var(--ink2); font-size: 14.5px; }
+  .reg-filter { margin: 14px 0 0; }
+  .reg-filter[hidden] { display: none; }
+  .reg .tags b.warn { border-color: rgba(255, 193, 99, 0.55); color: var(--warn); }
+
   /* ---------- tooltip ---------- */
   .tip {
     position: fixed; z-index: 60; pointer-events: none; max-width: 330px; padding: 11px 13px; border: 1px solid var(--hair2); border-radius: 10px;
@@ -337,7 +410,7 @@
     html { scroll-behavior: auto; }
     body::after, .mast, .pulse { animation: none; }
     .rv, .chap-head .chap-title .w { opacity: 1; transform: none; clip-path: none; transition: none; }
-    .rail .fill, .reg .bar i, .tab-ink, #waves, .nav a::after { transition: none; }
+    .rail .fill, .reg .bar i, .tab-ink, #waves, .nav a::after, .share-bar i, .spots .stack, .meter i { transition: none; }
   }
 </style>
 </head>
@@ -350,7 +423,8 @@
     <a href="#spectrum" data-for="spectrum"><b>03</b>Spectrum</a>
     <a href="#channels" data-for="channels"><b>04</b>Channels</a>
     <a href="#register" data-for="register"><b>05</b>Register</a>
-    <a href="#body" data-for="body"><b>06</b>Your body</a>
+    <a href="#rooms" data-for="rooms"><b>06</b>Rooms</a>
+    <a href="#body" data-for="body"><b>07</b>Your body</a>
   </nav>
   <p id="live" class="status" aria-live="polite"></p>
 </header>
@@ -396,6 +470,23 @@
         <article class="verdict rv" style="--i:5" id="v-lan"><p class="eyebrow">Devices on your network</p><h3 class="state"></h3><p class="fig"></p><p class="text"></p><div class="act"></div></article>
       </div>
     </div>
+    <div class="since">
+      <div class="since-top rv">
+        <div>
+          <p class="eyebrow">Since you opened this page</p>
+          <h3 class="since-head" id="since-head">Just started.</h3>
+          <p class="since-text" id="since-text">Readings collect here once a second while this page is on screen. Nothing is stored: closing the page clears them.</p>
+        </div>
+        <ul class="key" aria-hidden="true">
+          <li><i class="ln" style="background:var(--paper)"></i>All signals together</li>
+          <li><i class="ln" style="background:var(--mine)"></i>Your connection</li>
+          <li><i class="ln dash"></i>Background noise</li>
+        </ul>
+      </div>
+      <div class="since-plot rv" id="since-box" data-tip="timeline" tabindex="0" role="img" aria-label="Signal strength since this page opened. The changes are listed underneath."><canvas id="since" aria-hidden="true"></canvas></div>
+      <ol class="log" id="since-log" aria-label="What changed since this page opened"></ol>
+      <p class="since-more"><button class="tlink" type="button" id="since-more" hidden></button></p>
+    </div>
   </section>
 
   <section id="spectrum" class="chapter">
@@ -439,14 +530,27 @@
       <button class="tab" role="tab" type="button" data-tab="lan" aria-selected="false">On your network<span class="n" id="n-lan">—</span></button>
       <i class="tab-ink" id="tab-ink" aria-hidden="true"></i>
     </div>
+    <div class="pick reg-filter" id="reg-filter" role="group" aria-label="Kinds of Bluetooth device" hidden></div>
     <p class="reg-note" id="reg-note"></p>
     <ol class="reg" id="reg-list"></ol>
     <div class="reg-foot"><button class="pill" type="button" id="reg-more" hidden></button></div>
   </section>
 
-  <section id="body" class="chapter">
+  <section id="rooms" class="chapter">
     <header class="chap-head rv">
       <span class="chap-num">06</span>
+      <h2 class="chap-title"><span class="w">Room</span> <span class="w">by</span> <span class="w">room</span></h2>
+      <p class="chap-lede">Carry the Mac to each place you spend time and rest it where your head would be: on the pillow, at the desk, on the sofa. Each spot is measured for half a minute and kept in this browser on this Mac.</p>
+    </header>
+    <div class="rooms">
+      <div class="take rv" style="--i:1" id="room-take"></div>
+      <div class="spots-box rv" style="--i:2" id="room-list" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="body" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">07</span>
       <h2 class="chap-title"><span class="w">Your</span> <span class="w">body</span></h2>
       <p class="chap-lede">What the signals around your Mac mean for the person sitting there, according to the research so far, including where it is unsettled. A summary of the science, not medical advice.</p>
     </header>
@@ -455,6 +559,13 @@
       <p class="dose-head" id="dose-head">Waiting for readings…</p>
       <div class="dose-scale" id="dose-box"><canvas id="dose" aria-hidden="true"></canvas></div>
       <p class="dose-note" id="dose-note"></p>
+    </div>
+    <div class="share rv" id="share" hidden>
+      <p class="eyebrow">Where it comes from</p>
+      <h3 class="share-head" id="share-head"></h3>
+      <div class="share-bar" id="share-bar" role="img"></div>
+      <ul class="share-rows" id="share-rows"></ul>
+      <p class="share-note" id="share-note"></p>
     </div>
 
     <div class="sleep">
@@ -571,6 +682,7 @@
       <a href="https://link.springer.com/doi/10.1007/s11818-008-0353-9" target="_blank" rel="noopener">Bedroom shielding study (Leitgeb 2008)</a>
       <a href="https://doi.org/10.1371/journal.pone.0037455" target="_blank" rel="noopener">Bedroom signals and sleep (Mohler 2012)</a>
       <a href="https://www.pubmed.gov/28398549/" target="_blank" rel="noopener">Believed and actual exposure (Martens 2017)</a>
+      <a href="https://doi.org/10.1016/j.envint.2022.107144" target="_blank" rel="noopener">Whose signals reach people, 254,410 phone users (Boussad 2022)</a>
       <a href="https://www.icnirp.org/cms/upload/publications/ICNIRPrfgdl2020.pdf" target="_blank" rel="noopener">ICNIRP 2020 exposure guidelines</a>
       <a href="https://www.arpansa.gov.au/who-review-reports-no-effect-radiofrequency-electromagnetic-field-exposure-self-reported-symptoms-human-experimental-studies" target="_blank" rel="noopener">WHO review: symptoms in blinded experiments (2024)</a>
       <a href="https://www.arpansa.gov.au/who-systematic-review-finds-no-evidence-rf-emf-exposure-impacts-cognitive-performance" target="_blank" rel="noopener">WHO review: thinking and memory (2024)</a>
@@ -582,7 +694,7 @@
 
   <section id="blind" class="chapter coda">
     <header class="chap-head rv">
-      <span class="chap-num">07</span>
+      <span class="chap-num">08</span>
       <h2 class="chap-title"><span class="w">What</span> <span class="w">it</span> <span class="w">cannot</span> <span class="w">hear</span></h2>
     </header>
     <div class="cols">
@@ -901,8 +1013,43 @@ function channelStats(m, band) {
 }
 
 // A Bluetooth device rarely gives a name, so fall back to what kind of thing it is, then to its maker.
-const bleName = d => d.name || d.kind || (d.vendor ? `${d.vendor} device` : 'Unnamed device');
-const bleMeta = d => [d.name || d.kind ? d.vendor : null, d.name ? d.kind : null].filter(Boolean).join(' · ');
+// Whether a tracker is away from its owner is shown separately, so the kind loses that clause here.
+const shortKind = d => (d.kind || '').replace(/, away from (its|their) owner$/i, '') || null;
+const awayFrom = d => (d.away === true ? (/^AirPods/i.test(d.kind || '') ? 'away from their owner' : 'away from its owner') : null);
+const bleName = d => d.name || shortKind(d) || (d.vendor ? `${d.vendor} device` : 'Unnamed device');
+const bleMeta = d => [d.name || d.kind ? d.vendor : null, d.name ? shortKind(d) : null].filter(Boolean).join(' · ');
+
+// Broad kinds of Bluetooth device, in the order the register offers them. The app decodes most
+// from what a device broadcasts; the device's own name fills the gaps. These patterns live on the
+// page so they can be corrected without rebuilding the app.
+const BT_GROUPS = [['tracker', 'Trackers'], ['audio', 'Audio'], ['personal', 'Phones and computers'], ['media', 'TV and media'],
+                   ['input', 'Keyboards and mice'], ['health', 'Fitness'], ['home', 'Smart home'], ['beacon', 'Beacons'], ['unknown', 'Unidentified']];
+const NAME_GROUPS = [
+  ['tracker', /\b(air ?tag|smart ?tag|tile|chipolo|pebblebee|itag|key ?finder)\b/i],
+  ['audio', /airpods|beats|buds|earbud|headphone|headset|speaker|soundbar|soundcore|\bjbl\b|bose|sonos|marshall|jabra|sennheiser|\bw[hf]-|homepod|\becho\b/i],
+  ['media', /\[tv\]|\btv\b|bravia|webos|chromecast|fire ?tv|roku|projector/i],
+  ['input', /keyboard|mouse|trackpad|remote|\bmx (master|keys|anywhere)|controller|gamepad|dualsense|joy-con|pencil|stylus/i],
+  ['health', /scale|\bhrm\b|heart|polar h\d|tickr|cadence|power ?meter|\boura\b|whoop|blood|glucose|thermometer|oximeter|toothbrush|oral-b|sonicare/i],
+  ['personal', /iphone|ipad|macbook|imac|mac ?mini|watch|galaxy|pixel|oneplus|redmi|huawei|phone|laptop|surface|thinkpad|garmin|fitbit|amazfit|band\b/i],
+  ['home', /\bhue\b|lamp|light|bulb|plug|switch|thermostat|sensor|lock|doorbell|camera|kettle|purifier|humidifier|vacuum|roomba|govee|switchbot|nest|eufy|tapo|kasa|meross|shelly|aqara|yeelight|ikea/i],
+];
+function bleGroup(d) {
+  if (d.group === 'tracker') return 'tracker';   // decoded from the broadcast itself: a name never overrides that
+  const name = d.name || '';
+  for (const [g, re] of NAME_GROUPS) if (re.test(name)) return g;
+  if (d.group && BT_GROUPS.some(([g]) => g === d.group)) return d.group;
+  // Older app builds send only a label: read the kind from it.
+  const k = d.kind || '';
+  if (/airtag|tracker|find my beacon|find hub|smarttag/i.test(k)) return 'tracker';
+  if (/airpods|beats|audio|speaker|fast pair/i.test(k)) return 'audio';
+  if (/airplay receiver/i.test(k)) return 'media';
+  if (/keyboard|mouse|remote/i.test(k)) return 'input';
+  if (/heart|bike|scale|fitness/i.test(k)) return 'health';
+  if (/beacon/i.test(k)) return 'beacon';
+  if (/iphone|apple device|windows|garmin|samsung phone/i.test(k)) return 'personal';
+  if (/xiaomi|amazon|homekit|sensor/i.test(k)) return 'home';
+  return 'unknown';
+}
 
 // The two buttons above. The marker header is what lets the app tell its own page from any other.
 async function networkCommand(what) {
@@ -931,7 +1078,7 @@ function liveModel(m) {
     rssi: n.rssi, band: n.band, updates: n.current && fast ? 'every second' : 'every 10 s',
   }));
   for (const d of m.ble) {
-    signals.push({ id: 'b:' + d.id, cat: 'bt', connected: false, name: bleName(d), detail: bleMeta(d),
+    signals.push({ id: 'b:' + d.id, cat: 'bt', connected: false, name: bleName(d), detail: [bleMeta(d), awayFrom(d), trackerStay(d)].filter(Boolean).join(' · '),
                    rssi: d.rssi, band: 2, updates: fast ? 'every second' : 'every 2 s' });
   }
   return { signals, noise: m.iface.noise, stale: ui.stale };
@@ -942,6 +1089,7 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HEX = { mine: '#8cc8ff', other: '#ff7a4a', bt: '#6fe3a8', lan: '#f0c75e' };
 const RGB = { mine: [0.72, 0.87, 1.0], other: [1.0, 0.78, 0.66], bt: [0.72, 0.96, 0.84], lan: [1.0, 0.93, 0.72] };   // wave tints: pale, so the field stays clean
 const PAPER = '#efe9dd', BG = '#08090c';
+const glyphClass = cat => 'glyph ' + (cat === 'bt' ? 'dot' : cat === 'lan' ? 'ring' : 'sq');
 const F_MONO = '"SF Mono", ui-monospace, Menlo, monospace';
 const F_SANS = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
 const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -1953,8 +2101,26 @@ function channelsUpdate(m) {
 }
 
 /* ================================ the register ================================ */
-const reg = { tab: 'routers', nodes: new Map(), order: { routers: [], bt: [] }, open: { routers: false, bt: false, lan: false }, last: null };
+const reg = { tab: 'routers', nodes: new Map(), order: { routers: [], bt: [] }, open: { routers: false, bt: false, lan: false }, last: null, btKind: 'all' };
 const REG_LIMIT = 14;
+function btItem(d) {
+  const tracker = bleGroup(d) === 'tracker';
+  return { id: 'b:' + d.id, cat: 'bt', name: bleName(d), meta: [bleMeta(d), trackerStay(d)].filter(Boolean).join(' · '), rssi: d.rssi,
+           tags: tracker ? [d.away === true ? { text: 'Away from its owner', warn: true } : { text: 'Tracker' }] : [] };
+}
+// The kinds of Bluetooth device heard, as a filter above the list.
+function btFilter(kinds, total) {
+  const host = byId('reg-filter');
+  const show = reg.tab === 'bt' && total > 0 && kinds.size > 1;
+  host.hidden = !show;
+  if (!show) return;
+  const opts = [['all', 'All', total], ...BT_GROUPS.filter(([g]) => kinds.has(g)).map(([g, label]) => [g, label, kinds.get(g)])];
+  const sig = JSON.stringify([opts, reg.btKind]);
+  if (host.__sig === sig) return;
+  host.__sig = sig;
+  host.replaceChildren(...opts.map(([g, label, n]) => el('button', { type: 'button', 'aria-pressed': String(reg.btKind === g), text: `${label} ${n}`,
+    onclick: () => { reg.btKind = g; if (reg.last) registerUpdate(reg.last); } })));
+}
 function moveInk() {
   const b = document.querySelector(`.tab[data-tab="${reg.tab}"]`), ink = byId('tab-ink');
   if (!b) return;
@@ -2103,8 +2269,8 @@ function regRow(it) {
   r.g.className = 'glyph ' + (it.cat === 'bt' ? 'dot' : it.cat === 'lan' ? 'ring' : 'sq');
   r.g.style.color = HEX[it.cat];
   setText(r.name, it.name);   // names come off the air: text only
-  const tagSig = it.tags.join('|');
-  if (r.tags.__sig !== tagSig) { r.tags.__sig = tagSig; r.tags.replaceChildren(...it.tags.map(t => el('b', { text: t }))); }
+  const tagSig = JSON.stringify(it.tags);
+  if (r.tags.__sig !== tagSig) { r.tags.__sig = tagSig; r.tags.replaceChildren(...it.tags.map(t => el('b', { class: t.warn ? 'warn' : null, text: t.text || t }))); }
   setText(r.meta, it.meta || '');
   r.lvl.hidden = it.rssi == null;
   if (it.rssi != null) { r.fill.style.width = barPct(it.rssi) + '%'; r.fill.style.background = HEX[it.cat]; setText(r.db, fmtDb(it.rssi)); }
@@ -2125,8 +2291,12 @@ function registerUpdate(m) {
     message = items.length ? 'A dual-band router appears once per band. If a second router or mesh unit of yours uses a different name, mark it as yours.' : 'No Wi-Fi routers heard yet.';
   } else if (reg.tab === 'bt') {
     const state = (m.st.ble || {}).state, permission = (m.st.ble || {}).permission;
-    items = m.ble.map(d => ({ id: 'b:' + d.id, cat: 'bt', name: bleName(d), meta: bleMeta(d), rssi: d.rssi, tags: [] }));
-    message = items.length ? 'Anything that announced itself in the last minute, yours or a neighbour’s.'
+    const kinds = new Map();
+    for (const d of m.ble) { const g = bleGroup(d); kinds.set(g, (kinds.get(g) || 0) + 1); }
+    if (reg.btKind !== 'all' && !kinds.has(reg.btKind)) reg.btKind = 'all';
+    items = m.ble.filter(d => reg.btKind === 'all' || bleGroup(d) === reg.btKind).map(btItem);
+    btFilter(kinds, m.ble.length);
+    message = items.length ? 'Anything that announced itself in the last minute, yours or a neighbour’s. A tracker that says it has been away from its owner for a while is marked.'
       : state === 'on' ? 'Listening. No Bluetooth devices heard yet.'
       : (state === 'unauthorized' || permission === 'denied') ? 'Blocked until Signal Scan is allowed to use Bluetooth.'
       : state === 'off' ? 'Bluetooth is turned off on this Mac.'
@@ -2134,6 +2304,7 @@ function registerUpdate(m) {
   } else {
     ({ items, message, action, actions, sub } = lanItems(m));
   }
+  if (reg.tab !== 'bt') btFilter(new Map(), 0);
   let ordered = items;
   if (reg.tab !== 'lan') {
     const byKey = new Map(items.map(it => [it.id, it]));
@@ -2173,13 +2344,84 @@ function fmtDensity(s) {
   if (s >= 1e-3) return `${sig2(s * 1e3)} mW/m²`;
   return `${sig2(s * 1e6)} µW/m²`;
 }
+// Everything that reaches this spot, split by whose it is: your routers, other people's, Bluetooth
+// devices and your own devices heard by listening. With `since` (a scan time), routers only count
+// if a scan at or after that time heard them, and a listening pass only if it is that recent:
+// the room survey uses this so nothing measured at the last spot leaks into the next.
+function exposureParts(m, since) {
+  const parts = { mine: 0, other: 0, bt: 0, lan: 0 }, count = { mine: 0, other: 0, bt: 0, lan: 0 }, loud = {};
+  let top = 0;
+  const add = (cat, s, name, rssi) => {
+    if (!Number.isFinite(s)) return;
+    parts[cat] += s; count[cat] += 1; top = Math.max(top, s);
+    if (!loud[cat] || s > loud[cat].s) loud[cat] = { s, name, rssi };
+  };
+  for (const n of m.nets) {
+    if (since != null && !n.current && n.lastSeen != null && n.lastSeen < since) continue;
+    add(n.mine ? 'mine' : 'other', powerDensity(n.rssi, n.band), n.label, n.rssi);
+  }
+  for (const d of m.ble) add('bt', powerDensity(d.rssi, 2), bleName(d), d.rssi);
+  for (const d of heardDevices(m, true)) if (since == null || d.at >= since) add('lan', powerDensity(d.rssi, d.band || 2), d.name, d.rssi);
+  return { parts, count, loud, top, total: parts.mine + parts.other + parts.bt + parts.lan };
+}
+
+const pctText = p => (p < 1 ? 'under 1%' : `${Math.round(p)}%`);
+const SHARE = [['mine', 'Your Wi-Fi', 'your own Wi-Fi'], ['other', 'Neighbours’ Wi-Fi', 'your neighbours’ Wi-Fi'],
+               ['bt', 'Bluetooth', 'Bluetooth devices'], ['lan', 'Your devices', 'your own devices']];
+const shareSegs = new Map();
+function shareDetail(ex, k) {
+  const n = ex.count[k], l = ex.loud[k];
+  if (k === 'lan') return `${count(n, 'device')} heard when you last listened · loudest ${l.name} ${dbm(l.rssi)}`;
+  return `${n} heard · loudest ${k === 'bt' ? l.name : `“${short(l.name, 24)}”`} ${dbm(l.rssi)}`;
+}
+// "Where it comes from": the total above, split by whose it is.
+function shareUpdate(ex) {
+  const box = byId('share');
+  box.hidden = !(ex.total > 0);
+  if (box.hidden) return;
+  const pct = k => ex.parts[k] / ex.total * 100;
+  const shown = SHARE.filter(([k]) => ex.count[k] > 0);
+  const bar = byId('share-bar');
+  const segs = shown.map(([k]) => {
+    let s = shareSegs.get(k);
+    if (!s) {
+      s = el('i', { 'data-tip': 'share:' + k });
+      s.style.background = HEX[k];
+      s.style.boxShadow = `0 0 14px ${hexA(HEX[k], 0.4)}`;
+      s.style.flexGrow = '0';
+      shareSegs.set(k, s);
+    }
+    return s;
+  });
+  if (bar.children.length !== segs.length || segs.some((s, i) => bar.children[i] !== s)) { bar.replaceChildren(...segs); void bar.offsetWidth; }
+  for (const [k] of shown) shareSegs.get(k).style.flexGrow = String(Math.round(pct(k) * 10));
+  bar.setAttribute('aria-label', shown.map(([k, label]) => `${label} ${pctText(pct(k))}`).join(', '));
+  setTips('share:', shown.map(([k, label]) => [k, () => tipBody(pctText(pct(k)), HEX[k], label, [shareDetail(ex, k)])]));
+  // The words change only when a share moves by a couple of points, so they do not flicker.
+  const lead = shown.slice().sort((a, b) => ex.parts[b[0]] - ex.parts[a[0]])[0];
+  const sig = JSON.stringify(shown.map(([k]) => [k, Math.round(pct(k) / 2), ex.count[k], (ex.loud[k] || {}).name]));
+  if (box.__sig === sig) return;
+  box.__sig = sig;
+  byId('share-head').replaceChildren(...(pct(lead[0]) >= 50 ? ['Most of it comes from ', el('em', { text: lead[2] }), '.']
+    : ['The largest part comes from ', el('em', { text: lead[2] }), `, at ${pctText(pct(lead[0]))}.`]));
+  byId('share-rows').replaceChildren(...shown.map(([k, label]) => el('li', null,
+    el('span', { class: 'lb' }, el('i', { class: glyphClass(k), style: `color:${HEX[k]}` }), label),
+    el('span', { class: 'pc', text: pctText(pct(k)) }),
+    el('span', { class: 'dt', text: shareDetail(ex, k) }))));
+  setText(byId('share-note'), (ex.count.mine
+      ? `Switching off your own Wi-Fi would take away about ${pctText(pct('mine'))} of what reaches this spot. `
+      : 'None of it comes from a network marked as yours, so switching your own Wi-Fi off would change nothing here. ')
+    + 'Like the total above, each share counts every signal as if it never paused. A router in use transmits far more of the time than a Bluetooth gadget, so in practice the Wi-Fi shares are larger and the Bluetooth share smaller. '
+    + 'In a study of 254,410 phone users in 13 countries, people’s own Wi-Fi routers and Bluetooth devices made up more than half of the exposure for half of them.');
+}
+
 const dose = { box: byId('dose-box'), canvas: byId('dose'), total: null, top: null, xt: null, vt: 0, xs: null, vs: 0 };
 function bodyUpdate(m) {
-  const levels = [...m.nets.map(n => powerDensity(n.rssi, n.band)), ...m.ble.map(d => powerDensity(d.rssi, 2)),
-                  ...heardDevices(m, true).map(d => powerDensity(d.rssi, d.band || 2))].filter(Number.isFinite);
+  const ex = exposureParts(m);
   const head = byId('dose-head'), note = byId('dose-note');
-  if (!levels.length) { setText(head, 'Waiting for readings…'); setText(note, ''); setText(byId('sleep-scale'), ''); dose.total = null; wake(doseLoop); return; }
-  const total = levels.reduce((a, b) => a + b, 0), top = Math.max(...levels), times = LIMIT / total;
+  shareUpdate(ex);
+  if (!(ex.total > 0)) { setText(head, 'Waiting for readings…'); setText(note, ''); setText(byId('sleep-scale'), ''); dose.total = null; wake(doseLoop); return; }
+  const total = ex.total, top = ex.top, times = LIMIT / total;
   dose.total = total; dose.top = top;
   const sig = sig2(times);
   if (head.__sig !== sig) {
@@ -2603,6 +2845,518 @@ document.addEventListener('visibilitychange', () => {
   if (`${now.elapsed}|${now.due}` !== trialSig) trialRender();
 });
 
+/* ================================ since you opened the page ================================ */
+// A running record of this visit: one reading a second while the page is on screen, and the
+// comings and goings worth noticing. It lives in memory only and is gone when the page closes.
+const HIST_MAX = 4 * 3600;     // four hours of readings
+const LOUD = -80;              // fainter than this, things drift in and out of hearing all the time
+const SETTLE = 45;             // the first seconds after opening, or after a pause, are discovery, not news
+const TRACK_ALERT = 30 * 60;   // a tracker away from its owner, near this Mac for this long, gets a notice
+const TRACK_NEAR = -75;        // ...if it is heard about as strongly as something in the same room, not through a wall
+const hist = { start: null, last: null, pts: [], gaps: [], events: [], rooms: [], seen: new Map(), seq: 0,
+               iface: undefined, quietUntil: 0, settled: false, lanScan: null, lanSet: null, airAt: undefined, hidden: false };
+const span = s => {
+  if (!(s >= 0)) return '';
+  if (s < 90) return `${Math.round(s)} s`;
+  const min = Math.round(s / 60);
+  return min < 90 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
+};
+const clockS = t => new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function logEvent(t, cat, text, warn) {
+  hist.events.push({ t, cat, text, warn: !!warn, id: ++hist.seq });
+  hist.events.sort((a, b) => a.t - b.t || a.id - b.id);   // an arrival is logged when it began
+  if (hist.events.length > 400) hist.events.splice(0, hist.events.length - 400);
+}
+// Called with every reading; returns false when the reading is not new.
+function historyFeed(m, model) {
+  const t = m.st.now;
+  if (!Number.isFinite(t) || (hist.last != null && t <= hist.last)) return false;
+  if (hist.start == null) { hist.start = t; hist.quietUntil = t + SETTLE; }
+  else if (t - hist.last > 6) {
+    hist.gaps.push([hist.last, t]);
+    logEvent(hist.last, 'gap', `No readings for ${span(t - hist.last)}: ${hist.hidden ? 'the page was out of sight' : 'the app was not answering'}`);
+    hist.quietUntil = t + SETTLE;
+    hist.settled = false;
+  }
+  hist.hidden = false;
+  hist.last = t;
+  const on = !!m.iface.associated;
+  hist.pts.push({ t, total: sumDbm(model.signals.map(s => s.rssi)),
+                  link: on && Number.isFinite(m.iface.rssi) ? m.iface.rssi : null, noise: on && Number.isFinite(m.iface.noise) ? m.iface.noise : null });
+  if (hist.pts.length > HIST_MAX) hist.pts.splice(0, hist.pts.length - HIST_MAX);
+  watchLink(m, t);
+  watchSignals(m, t);
+  watchNetwork(m, t);
+  watchListening(m, t);
+  return true;
+}
+function watchLink(m, t) {
+  const i = m.iface, was = hist.iface;
+  const now = i.associated ? { ssid: i.ssid || null, bssid: i.bssid || null, band: i.band || null } : null;
+  hist.iface = now;
+  if (was === undefined) return;   // the first reading: nothing has changed yet
+  const on = n => `${n.ssid ? `“${short(n.ssid, 28)}”` : 'a network'}${n.band ? ` on ${BAND[n.band]}` : ''}`;
+  if (was && !now) logEvent(t, 'link', 'Wi-Fi disconnected');
+  else if (!was && now) logEvent(t, 'link', `Joined ${on(now)}`);
+  else if (was && now) {
+    if (now.ssid && was.ssid && now.ssid !== was.ssid) logEvent(t, 'link', `Joined ${on(now)}`);
+    else if (now.band && was.band && now.band !== was.band) logEvent(t, 'link', `Switched from ${BAND[was.band]} to ${BAND[now.band]}`);
+    else if (now.bssid && was.bssid && now.bssid !== was.bssid) logEvent(t, 'link', 'Moved to another router of the same network');
+  }
+}
+// Routers and Bluetooth devices coming and going. Phones and earbuds change their Bluetooth
+// address every few minutes, so only named devices and trackers are followed; a tracker away
+// from its owner keeps one address for hours.
+function signalsNow(m) {
+  const here = new Map();
+  for (const n of m.nets) here.set('w:' + radioKey(n), { label: n.label, cat: n.mine ? 'mine' : 'other', rssi: n.rssi, mine: !!n.mine, tracker: false });
+  for (const d of m.ble) {
+    const tracker = bleGroup(d) === 'tracker', key = tracker ? 'b:' + d.id : d.name ? 'bn:' + d.name : null;
+    if (key) here.set(key, { label: bleName(d), cat: 'bt', rssi: d.rssi, mine: false, tracker, away: d.away === true });
+  }
+  return here;
+}
+const arrival = e => (e.cat === 'bt' ? (e.tracker && e.away ? `${e.label}, away from its owner,` : e.label)
+                                     : `${e.mine ? 'Your router ' : ''}“${short(e.label, 30)}”`);
+function watchSignals(m, t) {
+  const here = signalsNow(m), quiet = t < hist.quietUntil;
+  for (const [k, s] of here) {
+    let e = hist.seen.get(k);
+    if (!e || e.gone) {
+      e = { first: t, max: s.rssi, said: quiet, gone: false, logged: e ? e.logged : -Infinity };
+      hist.seen.set(k, e);
+    }
+    Object.assign(e, s, { last: t, max: Math.max(e.max, s.rssi), avg: e.avg == null ? s.rssi : e.avg * 0.95 + s.rssi * 0.05 });
+    // Announce an arrival once it has stayed a while and been heard clearly.
+    if (!e.said && (e.mine || e.max >= LOUD) && t - e.first >= (e.tracker ? 60 : 20)) {
+      e.said = true;
+      if (t - e.logged >= 300) { e.logged = t; logEvent(e.first, e.cat, `${arrival(e)} came within range, ${dbm(e.max)}`, e.tracker && e.away); }
+    }
+  }
+  if (quiet) return;
+  const settling = !hist.settled;   // the first check after a pause: whatever is missing went while nobody was looking
+  hist.settled = true;
+  for (const [k, e] of hist.seen) {
+    if (e.gone || here.has(k)) continue;
+    e.gone = true;
+    if (settling || !e.said || !(e.mine || e.max >= LOUD) || t - e.logged < 300) continue;
+    e.logged = t;
+    logEvent(e.last, e.cat, `${arrival(e)} went out of range`);
+  }
+  if (hist.seen.size > 3000) for (const [k, e] of hist.seen) if (e.gone && t - e.last > 3600) hist.seen.delete(k);
+}
+const lanName = d => d.name || d.host || (tidyMaker(d.vendor) ? `A ${tidyMaker(d.vendor)} device` : 'A device');
+function watchNetwork(m, t) {
+  const lan = m.st.lan || {};
+  if (!lan.trusted || !lan.scanAt || lan.scanAt === hist.lanScan) return;   // the list only changes after a search
+  const first = hist.lanScan == null;
+  hist.lanScan = lan.scanAt;
+  const now = new Map(m.lan.filter(d => !d.self).map(d => [d.mac || d.ip, d]));
+  if (!first && hist.lanSet) {
+    for (const [k, d] of now) if (!hist.lanSet.has(k)) logEvent(t, 'lan', `${lanName(d)} joined your network`);
+    for (const [k, d] of hist.lanSet) if (!now.has(k)) logEvent(t, 'lan', `${lanName(d)} is no longer on your network`);
+  }
+  hist.lanSet = now;
+}
+function watchListening(m, t) {
+  const res = (airOf(m) || {}).result, at = res && res.at;
+  if (hist.airAt === undefined) { hist.airAt = at || null; return; }
+  if (!at || at === hist.airAt) return;
+  hist.airAt = at;
+  logEvent(at, 'lan', `Listened: heard ${count((res.devices || []).length, 'device')} of yours`);
+}
+// How long a tracker has been near this Mac, for its row and tooltip.
+function trackerStay(d) {
+  if (bleGroup(d) !== 'tracker') return null;
+  const e = hist.seen.get('b:' + d.id);
+  return e && !e.gone && e.last - e.first >= 120 ? `near this Mac for ${span(e.last - e.first)}` : null;
+}
+function trackerAlerts() {
+  const out = [];
+  for (const e of hist.seen.values()) if (e.tracker && e.away && !e.gone && e.last - e.first >= TRACK_ALERT && e.avg >= TRACK_NEAR) out.push(e);
+  return out.sort((a, b) => a.first - b.first);
+}
+
+const since = { box: byId('since-box'), canvas: byId('since'), point: null, geo: null, open: false };
+const SINCE_TOP = -20, SINCE_BOT = -100;
+function sinceStats() {
+  let lo = Infinity, hi = -Infinity, tlo = Infinity, thi = -Infinity;
+  for (const p of hist.pts) {
+    if (p.link != null) { lo = Math.min(lo, p.link); hi = Math.max(hi, p.link); }
+    if (p.total != null) { tlo = Math.min(tlo, p.total); thi = Math.max(thi, p.total); }
+  }
+  const paused = hist.gaps.reduce((a, [x, y]) => a + (y - x), 0);
+  return { lo, hi, tlo, thi, dur: hist.last - hist.pts[0].t - paused };
+}
+function sinceUpdate() {
+  wake(sinceLoop);
+  if (!hist.pts.length) return;
+  const s = sinceStats(), drops = hist.events.filter(e => e.cat === 'link' && e.text === 'Wi-Fi disconnected').length;
+  let head, em = null, text;
+  if (s.dur < 60) {
+    head = 'Just started.';
+    text = 'Readings collect here once a second while this page is on screen. Nothing is stored: closing the page clears them.';
+  } else {
+    em = `${span(s.dur)} of readings`;
+    head = drops ? `Wi-Fi dropped ${drops === 1 ? 'once' : `${drops} times`}.` : !Number.isFinite(s.lo) ? 'Not connected.'
+         : s.hi - s.lo <= 8 ? 'Steady.' : 'Your connection moved.';
+    const parts = [];
+    if (Number.isFinite(s.lo)) parts.push(`Your connection ranged from ${neg(Math.round(s.lo))} to ${neg(Math.round(s.hi))} dBm`);
+    if (Number.isFinite(s.tlo)) parts.push(`everything together from ${neg(Math.round(s.tlo))} to ${neg(Math.round(s.thi))} dBm`);
+    text = (parts.length ? parts.join('; ') + '.' : '')
+      + (hist.gaps.length ? ' The hatched bands are pauses, drawn narrow whatever their length: the Mac only listens while this page is on screen.' : ' Nothing is stored: closing the page clears it.');
+  }
+  const headEl = byId('since-head'), sig = JSON.stringify([head, em]);
+  if (headEl.__sig !== sig) { headEl.__sig = sig; headEl.replaceChildren(head, em ? el('em', { text: em }) : ''); }
+  setText(byId('since-text'), text.trim());
+  sinceLog();
+}
+const LOG_SHOW = 6;
+function sinceLog() {
+  const list = byId('since-log'), more = byId('since-more');
+  const evs = hist.events.slice().reverse(), shown = since.open ? evs : evs.slice(0, LOG_SHOW);
+  more.hidden = evs.length <= LOG_SHOW;
+  setText(more, since.open ? 'Show fewer' : `Show all ${evs.length}`);
+  const quietYet = !evs.length && hist.last != null && hist.last - hist.start >= SETTLE;
+  const sig = JSON.stringify([shown.map(e => e.id), quietYet]);
+  if (list.__sig === sig) return;
+  list.__sig = sig;
+  if (!shown.length) { list.replaceChildren(...(quietYet ? [el('li', null, el('time'), el('i'), el('span', { text: 'Nothing has come or gone yet.' }))] : [])); return; }
+  list.replaceChildren(...shown.map(e => el('li', null,
+    el('time', { datetime: new Date(e.t * 1000).toISOString(), text: clock(e.t) }),
+    HEX[e.cat] ? el('i', { class: glyphClass(e.cat), style: `color:${e.warn ? '#ffc163' : HEX[e.cat]}` }) : el('i', { class: 'rule' }),
+    el('span', { class: e.warn ? 'warn' : null, text: e.text }))));
+}
+byId('since-more').addEventListener('click', () => { since.open = !since.open; sinceLog(); });
+function nearestPoint(tt) {
+  const pts = hist.pts;
+  if (!pts.length) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (pts[mid].t < tt) lo = mid + 1; else hi = mid; }
+  const a = pts[Math.max(0, lo - 1)], b = pts[lo];
+  return Math.abs(a.t - tt) <= Math.abs(b.t - tt) ? a : b;
+}
+// The time axis covers only the time the page was on screen: each pause is a narrow band instead
+// of its real length, so an hour away does not squash the readings into a sliver.
+const GAP_W = 22;
+function timeAxis(t0, tLast, width) {
+  const gaps = hist.gaps.filter(([a, b]) => b > t0 && a < tLast).map(([a, b]) => [Math.max(a, t0), b]);
+  const active = tLast - t0 - gaps.reduce((s, [a, b]) => s + (b - a), 0);
+  const pps = Math.max(1e-6, width - gaps.length * GAP_W) / Math.max(active, 120);
+  const x = t => {
+    let px = 0, cur = t0;
+    for (const [a, b] of gaps) {
+      if (t <= a) break;
+      px += (a - cur) * pps;
+      if (t < b) return px + (t - a) / (b - a) * GAP_W;
+      px += GAP_W;
+      cur = b;
+    }
+    return px + (t - cur) * pps;
+  };
+  const t = px => {
+    let at = 0, cur = t0;
+    for (const [a, b] of gaps) {
+      const run = (a - cur) * pps;
+      if (px <= at + run) return cur + (px - at) / pps;
+      at += run;
+      if (px <= at + GAP_W) return a + (px - at) / GAP_W * (b - a);
+      at += GAP_W;
+      cur = b;
+    }
+    return cur + (px - at) / pps;
+  };
+  return { x, t, pps, gaps };
+}
+since.box.addEventListener('pointermove', e => {
+  const g = since.geo;
+  if (!g) return;
+  const r = since.box.getBoundingClientRect(), x = clamp(e.clientX - r.left, g.L, g.xEnd);
+  since.point = nearestPoint(g.axis.t(x - g.L));
+  wake(sinceLoop);
+});
+since.box.addEventListener('pointerleave', () => { since.point = null; wake(sinceLoop); });
+tips.set('timeline', () => {
+  const p = since.point || hist.pts[hist.pts.length - 1];
+  if (!p) return null;
+  const g = since.geo, near = g ? 6 / g.axis.pps : 4;   // events within a few pixels of the crosshair
+  const evs = hist.events.filter(e => Math.abs(e.t - p.t) <= Math.max(2, near));
+  return [el('div', { class: 'v', text: clockS(p.t) }),
+          ...[['All signals together', p.total, PAPER], ['Your connection', p.link, HEX.mine], ['Background noise', p.noise, 'rgba(239,233,221,0.5)']]
+            .filter(([, v]) => v != null).map(([label, v, col]) => el('div', { class: 'n' }, el('span', { class: 'k', style: `background:${col}` }), `${label} ${dbm(v)}`)),
+          ...evs.slice(-3).map(e => el('div', { class: 'l', text: e.text }))];
+});
+function sinceLoop() {
+  const box = since.box, c = since.canvas;
+  if (!isOn(box)) return false;
+  const w = box.clientWidth, h = box.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return false;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const pts = hist.pts, narrow = w < 620;
+  const L = 40, R = narrow ? 12 : 168, T = 14, base = h - 30;
+  const t0 = pts.length ? pts[0].t : 0, tLast = pts.length ? pts[pts.length - 1].t : 0;
+  const axis = timeAxis(t0, tLast, w - L - R);
+  const X = t => L + axis.x(t);
+  const Y = v => T + (SINCE_TOP - clamp(v, SINCE_BOT, SINCE_TOP)) / (SINCE_TOP - SINCE_BOT) * (base - T);
+  since.geo = { L, xEnd: X(tLast), axis };
+  // A line every 20 dB, labelled on the left.
+  ctx.font = `500 10px ${F_MONO}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = -40; v >= SINCE_BOT; v -= 20) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = v === SINCE_BOT ? 'rgba(239,233,221,0.22)' : 'rgba(239,233,221,0.07)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(239,233,221,0.38)'; ctx.fillText(neg(v), L - 8, y);
+  }
+  if (!pts.length) return false;
+  ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(239,233,221,0.42)';
+  ctx.textAlign = 'left'; ctx.fillText(clock(t0), L, base + 10);
+  if (X(tLast) - L > 90) { ctx.textAlign = 'right'; ctx.fillText(clock(tLast), X(tLast), base + 10); }
+  // Pauses, as narrow hatched bands; rooms measured, as soft bands with their names.
+  for (const [a, b] of axis.gaps) {
+    const xa = X(a), xb = X(b);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(xa, T, xb - xa, base - T); ctx.clip();
+    ctx.fillStyle = 'rgba(239,233,221,0.03)'; ctx.fillRect(xa, T, xb - xa, base - T);
+    ctx.strokeStyle = 'rgba(239,233,221,0.12)'; ctx.lineWidth = 1;
+    for (let y = T - (xb - xa); y < base; y += 7) { ctx.beginPath(); ctx.moveTo(xa, y + (xb - xa)); ctx.lineTo(xb, y); ctx.stroke(); }
+    ctx.restore();
+  }
+  for (const r of hist.rooms) {
+    if (r.to < t0) continue;
+    const xa = X(Math.max(r.from, t0)), xb = X(r.to);
+    ctx.fillStyle = 'rgba(140,200,255,0.06)'; ctx.fillRect(xa, T, xb - xa, base - T);
+    ctx.fillStyle = 'rgba(239,233,221,0.55)'; ctx.textAlign = 'left'; ctx.fillText(short(r.name, 14), xa + 4, T + 2);
+  }
+  // The three lines, averaged per pixel and broken wherever readings stopped.
+  const line = (key, colour, width, dash) => {
+    ctx.save();
+    ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath();
+    let pen = false, col = null, sum = 0, n = 0, prevT = null;
+    const flush = () => {
+      if (!n) return;
+      const y = Y(sum / n);
+      if (pen) ctx.lineTo(col, y); else { ctx.moveTo(col, y); pen = true; }
+      sum = 0; n = 0;
+    };
+    for (const p of pts) {
+      const v = p[key], broken = prevT != null && p.t - prevT > 6;
+      prevT = p.t;
+      if (broken || v == null) { flush(); pen = false; if (v == null) continue; }
+      const x = Math.round(X(p.t));
+      if (col !== x) { flush(); col = x; }
+      sum += v; n += 1;
+    }
+    flush();
+    ctx.stroke();
+    ctx.restore();
+  };
+  line('noise', 'rgba(239,233,221,0.45)', 1, [4, 3]);
+  line('link', HEX.mine, 2);
+  line('total', PAPER, 2);
+  // Each line named where it ends, nudged apart so the names never overlap.
+  if (!narrow) {
+    const lastOf = key => { for (let i = pts.length - 1; i >= Math.max(0, pts.length - 6); i--) if (pts[i][key] != null) return pts[i]; return null; };
+    const ends = [['total', 'All together'], ['link', 'Your connection'], ['noise', 'Noise']]
+      .map(([k, label]) => { const p = lastOf(k); return p ? { y: Y(p[k]), x: X(p.t), text: `${label} ${fmtDb(p[k])}` } : null; })
+      .filter(Boolean).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+    ctx.font = `500 11px ${F_MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(239,233,221,0.72)';
+    for (const e of ends) ctx.fillText(e.text, e.x + 10, e.y);
+  }
+  // A tick on the time axis for each change in the list below.
+  for (const e of hist.events) {
+    if (e.t < t0) continue;
+    const x = Math.round(X(e.t)) + 0.5;
+    ctx.strokeStyle = e.warn ? '#ffc163' : HEX[e.cat] || 'rgba(239,233,221,0.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, base - 8); ctx.lineTo(x, base); ctx.stroke();
+  }
+  // The crosshair, with a dot on each line.
+  const p = since.point;
+  if (p && p.t >= t0) {
+    const x = Math.round(X(p.t)) + 0.5;
+    ctx.strokeStyle = 'rgba(239,233,221,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, base); ctx.stroke();
+    for (const [k, colour] of [['noise', 'rgba(239,233,221,0.7)'], ['link', HEX.mine], ['total', PAPER]]) {
+      if (p[k] == null) continue;
+      ctx.fillStyle = colour; ctx.strokeStyle = BG; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, Y(p[k]), 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+  return false;
+}
+track(since.box, () => wake(sinceLoop));
+
+/* ================================ room by room ================================ */
+// A reading saved at each spot in the home, averaged over half a minute. Kept in this browser's
+// storage on this Mac only, like the sleep trial; nothing is sent anywhere.
+const ROOM_KEY = 'signalscan.rooms', ROOM_SECS = 30, ROOM_MAX = 12;
+const ROOM_IDEAS = ['Bed', 'Desk', 'Sofa', 'Kitchen', 'Child’s room'];
+const ROOM_PARTS = [['mine', 'Your Wi-Fi', 'your Wi-Fi'], ['other', 'Neighbours’ Wi-Fi', 'neighbours'], ['bt', 'Bluetooth', 'Bluetooth'], ['lan', 'Your devices', 'your devices']];
+let rooms = [], meas = null, roomNote = '';
+try {
+  const saved = JSON.parse(localStorage.getItem(ROOM_KEY) || 'null');
+  if (saved && saved.v === 1 && Array.isArray(saved.spots)) rooms = saved.spots.filter(s => s && typeof s.name === 'string' && s.total > 0 && s.parts);
+} catch (e) { /* private window */ }
+function roomsSave() { try { localStorage.setItem(ROOM_KEY, JSON.stringify({ v: 1, spots: rooms })); } catch (e) { /* kept for this visit only */ } }
+
+const take = {
+  box: byId('room-take'),
+  input: el('input', { class: 'line-in', type: 'text', maxlength: '40', placeholder: 'Name this spot, e.g. Bed', 'aria-label': 'Name of this spot', autocomplete: 'off', spellcheck: 'false' }),
+  ideas: el('div', { class: 'pick', role: 'group', 'aria-label': 'Suggested names' }),
+  go: el('button', { class: 'pill solid', type: 'button', text: 'Measure for 30 seconds' }),
+  note: el('p', { class: 'fine' }),
+  what: el('h3'), num: el('span'), meter: el('i'), status: el('p'),
+  stop: el('button', { class: 'tlink', type: 'button', text: 'Stop' }),
+};
+take.idle = el('div', null,
+  el('p', { class: 'eyebrow', text: 'Measure this spot' }),
+  el('h3', { text: 'Name it, then hold still' }),
+  el('p', { text: 'Put the Mac where your head would be. It listens for half a minute: at least two Wi-Fi scans and every Bluetooth announcement in that time.' }),
+  el('div', { class: 'row' }, take.input), take.ideas,
+  el('div', { class: 'row' }, take.go),
+  take.note);
+take.busy = el('div', { hidden: true },
+  el('p', { class: 'eyebrow', text: 'Measuring' }), take.what,
+  el('p', { class: 'count-down' }, take.num, el('small', { text: 'seconds' })),
+  el('div', { class: 'meter' }, take.meter),
+  take.status,
+  el('div', { class: 'row' }, take.stop));
+take.box.replaceChildren(take.idle, take.busy);
+take.ideas.replaceChildren(...ROOM_IDEAS.map(name => el('button', { type: 'button', text: name, onclick: () => { take.input.value = name; roomTakeUpdate(); take.go.focus(); } })));
+take.input.addEventListener('input', () => roomTakeUpdate());
+take.input.addEventListener('keydown', e => { if (e.key === 'Enter') roomStart(); });
+take.go.addEventListener('click', () => roomStart());
+take.stop.addEventListener('click', () => { meas = null; roomNote = 'Stopped. Nothing was saved.'; roomsUpdate(); });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  hist.hidden = true;
+  if (meas) { meas = null; roomNote = 'Measuring stopped when the page went out of sight, because the Mac only listens while it is showing. Nothing was saved.'; roomsUpdate(); }
+});
+
+const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+function roomStart() {
+  const name = take.input.value.trim().slice(0, 40), d = ui.data;
+  if (!name || !d || ui.stale || meas) return;
+  meas = { name, asked: d.now, scan0: (d.wifi || {}).scanAt || 0, from: null, n: 0, sum: { mine: 0, other: 0, bt: 0, lan: 0 }, total: 0,
+           link: 0, linkN: 0, scans: new Set(), src: new Map(), radios: 0, bt: 0 };
+  roomNote = '';
+  roomsUpdate();
+}
+// Fed every new reading while measuring.
+function roomFeed(m) {
+  if (!meas) return;
+  const t = m.st.now, scanAt = (m.st.wifi || {}).scanAt || 0;
+  if (meas.from == null) {
+    // Readings from before the button was pressed may come from the last spot: wait for a fresh Wi-Fi scan.
+    if (scanAt > meas.scan0) meas.from = scanAt; else return;
+  }
+  const ex = exposureParts(m, meas.from);
+  meas.n += 1;
+  for (const k of Object.keys(meas.sum)) meas.sum[k] += ex.parts[k];
+  meas.total += ex.total;
+  meas.radios = Math.max(meas.radios, ex.count.mine + ex.count.other);
+  meas.bt = Math.max(meas.bt, ex.count.bt);
+  if (m.iface.associated && Number.isFinite(m.iface.rssi)) { meas.link += Math.pow(10, m.iface.rssi / 10); meas.linkN += 1; }
+  for (const [cat, l] of Object.entries(ex.loud)) {
+    const k = cat + '|' + l.name, o = meas.src.get(k) || { name: l.name, cat, s: 0 };
+    o.s += l.s;
+    meas.src.set(k, o);
+  }
+  meas.scans.add(scanAt);
+  if (t - meas.from >= ROOM_SECS && meas.scans.size >= 2 && meas.n > 0) roomFinish(m);
+}
+function roomFinish(m) {
+  const n = meas.n, t = m.st.now;
+  let top = null;
+  for (const o of meas.src.values()) if (!top || o.s > top.s) top = o;
+  const spot = { name: meas.name, at: t, secs: Math.round(t - meas.from), scans: meas.scans.size, total: meas.total / n,
+                 parts: { mine: meas.sum.mine / n, other: meas.sum.other / n, bt: meas.sum.bt / n, lan: meas.sum.lan / n },
+                 link: meas.linkN ? Math.round(10 * Math.log10(meas.link / meas.linkN)) : null,
+                 top: top ? { name: top.name, cat: top.cat } : null, radios: meas.radios, bt: meas.bt };
+  const earlier = rooms.find(s => sameName(s.name, spot.name));
+  rooms = rooms.filter(s => s !== earlier);
+  rooms.push(spot);
+  while (rooms.length > ROOM_MAX) rooms.splice(rooms.reduce((old, s, i) => (s.at < rooms[old].at ? i : old), 0), 1);
+  roomsSave();
+  hist.rooms.push({ from: meas.from, to: t, name: spot.name });
+  logEvent(t, 'room', `Measured ${spot.name}: ${fmtDensity(spot.total)}`);
+  roomNote = earlier ? `Saved ${spot.name}, replacing the earlier reading.` : `Saved ${spot.name}.`;
+  take.input.value = '';
+  meas = null;
+  roomsUpdate();
+}
+function roomTakeUpdate() {
+  const busy = !!meas, d = ui.data, name = take.input.value.trim();
+  take.idle.hidden = busy;
+  take.busy.hidden = !busy;
+  for (const b of take.ideas.children) b.setAttribute('aria-pressed', String(b.textContent === name));
+  take.go.disabled = !name || !d || ui.stale;
+  setText(take.go, name && rooms.some(s => sameName(s.name, name)) ? `Measure ${short(name, 18)} again` : 'Measure for 30 seconds');
+  setText(take.note, roomNote || (!d || ui.stale ? 'Waiting for the scanner.' : 'Keep this page on screen while it measures: the Mac only listens while the page is showing.'));
+  if (!busy) return;
+  setText(take.what, meas.name);
+  const left = meas.from == null || !d ? ROOM_SECS : Math.max(0, ROOM_SECS - (d.now - meas.from));
+  setText(take.num, String(Math.ceil(left)));
+  take.meter.style.width = `${(1 - left / ROOM_SECS) * 100}%`;
+  setText(take.status, meas.from == null ? 'Waiting for a fresh Wi-Fi scan, so nothing from the last spot is counted. Keep the Mac still.'
+    : left <= 0 && meas.scans.size < 2 ? 'Waiting for one more Wi-Fi scan. Keep the Mac still.'
+    : `Keep the Mac still. ${count(meas.scans.size, 'Wi-Fi scan')} so far.`);
+}
+function fractionOf(r) {
+  if (r < 1.75) return `about ${Math.round(100 / r)}% of`;
+  const n = Math.round(r);
+  const words = { 2: 'half', 3: 'a third', 4: 'a quarter', 5: 'a fifth', 6: 'a sixth', 7: 'a seventh', 8: 'an eighth', 9: 'a ninth', 10: 'a tenth' };
+  return words[n] ? `about ${words[n]} of` : `about 1/${n.toLocaleString('en')} of`;
+}
+const when = at => new Date(at * 1000).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+function roomsUpdate() {
+  roomTakeUpdate();
+  section('room-list', [rooms, roomNote], () => {
+    const sorted = rooms.slice().sort((a, b) => a.total - b.total);
+    const out = [el('p', { class: 'eyebrow', text: 'Spots you measured' })];
+    if (!sorted.length) {
+      return [...out, el('h3', { class: 'spots-head', text: 'Nothing measured yet.' }),
+              el('p', { class: 'spots-sub', text: 'Start with the bed: it is where you spend the most hours in one place. Then the desk and the sofa. The list ranks them, quietest first.' })];
+    }
+    const q = sorted[0], loud = sorted[sorted.length - 1], r = loud.total / q.total;
+    out.push(el('h3', { class: 'spots-head' }, ...(sorted.length === 1 ? [`${q.name}: about `, el('em', { text: fmtDensity(q.total) }), '. Measure a second spot to compare.']
+      : r < 1.26 ? [sorted.length === 2 ? `${q.name} and ${loud.name} get about the same.` : `All ${sorted.length} spots get about the same.`]
+      : [el('em', { text: q.name }), ` is the quietest. It gets ${fractionOf(r)} what reaches ${loud.name}.`])));
+    // What matters most for sleep: how much of what reaches the bed is your own Wi-Fi.
+    const bed = sorted.find(s => /\bbed/i.test(s.name)) || q, own = bed.parts.mine / bed.total;
+    out.push(el('p', { class: 'spots-sub', text: !(bed.parts.mine > 0) ? `None of what reaches ${bed.name} comes from a network marked as yours.`
+      : `At ${bed.name}, ${pctText(own * 100)} of it is your own Wi-Fi` + (own >= 0.5 ? ', so switching it off at night would remove most of it.'
+      : own >= 0.2 ? '; switching it off at night would remove that share.' : ', so switching it off would change little there.') }));
+    const present = ROOM_PARTS.filter(([k]) => sorted.some(s => s.parts[k] > 0));
+    out.push(el('ul', { class: 'key' }, present.map(([k, label]) => el('li', null, el('i', { class: glyphClass(k), style: `color:${HEX[k]}` }), label))));
+    const tipRows = [];
+    out.push(el('ol', { class: 'spots' }, sorted.map((s, i) => {
+      const pct = k => s.parts[k] / s.total * 100;
+      const mix = present.filter(([k]) => s.parts[k] > 0);
+      const lines = [...mix.map(([k, label]) => `${label} ${pctText(pct(k))}`), s.link != null ? `Your connection ${dbm(s.link)}` : null,
+                     s.top ? `Loudest: ${s.top.name}` : null, `Measured ${when(s.at)}, over ${s.secs} s`];
+      tipRows.push([String(i), () => tipBody(fmtDensity(s.total), PAPER, s.name, lines)]);
+      return el('li', null,
+        el('span', { class: 'rk', text: String(i + 1).padStart(2, '0') }),
+        el('span', { class: 'nm', text: s.name }),
+        el('span', { class: 'v', text: fmtDensity(s.total) }),
+        el('span', { class: 'stack', 'data-tip': 'room:' + i, style: `width:${Math.max(1.5, s.total / loud.total * 100)}%` },
+          mix.map(([k]) => el('i', { style: `flex-grow:${Math.round(pct(k) * 10)};background:${HEX[k]}` }))),
+        el('span', { class: 'dt', text: [...mix.map(([k, , few]) => `${pctText(pct(k))} ${few}`), s.link != null ? `your connection ${dbm(s.link)}` : null, when(s.at)].filter(Boolean).join(' · ') }),
+        el('button', { class: 'tlink', type: 'button', text: 'Remove', onclick: () => { rooms = rooms.filter(x => x !== s); roomsSave(); roomNote = ''; roomsUpdate(); } }));
+    })));
+    setTips('room:', tipRows);
+    out.push(el('p', { class: 'spots-fine', text: 'Each spot is an average over half a minute, counted as if every signal never paused, like the totals elsewhere on this page. '
+      + 'Bars share one scale: half the length is half the signal. Routers are busier at some hours than others, so compare spots measured close together in time.' }));
+    return out;
+  });
+}
+
 /* ================================ notices and status ================================ */
 const statusDot = el('i', { class: 'pulse off' }), statusText = document.createTextNode('Waiting for the scanner');
 byId('live').replaceChildren(statusDot, statusText);
@@ -2633,6 +3387,16 @@ function renderNotices(m) {
   if (d.wifi && d.wifi.error) notes.push(['Wi-Fi', d.wifi.error]);
   if (bs === 'off') notes.push(['Bluetooth is off', 'Turn Bluetooth on for this Mac to count nearby Bluetooth devices.']);
   if (bs === 'unsupported') notes.push(['Bluetooth', 'This Mac does not offer Bluetooth Low Energy scanning.']);
+  // A tracker that says it has been away from its owner, and has stayed near this Mac for half an hour.
+  const followers = trackerAlerts();
+  if (followers.length) {
+    const e = followers[0], what = (e.label || 'tracker').replace(/, away from (its|their) owner$/i, '');
+    const lead = followers.length === 1 ? `${/^[aeiou]/i.test(what) ? 'An' : 'A'} ${what} that is away from its owner has`
+                                        : `${followers.length} trackers that are away from their owners have`;
+    notes.push(['Tracker nearby', `${lead} been near this Mac since ${clock(e.first)} (${span(e.last - e.first)}), heard at about ${dbm(e.avg)}. If nobody in your home owns it, it may be travelling with you or in your bag. `
+      + 'Phones warn about unknown trackers that move with you: an iPhone does so by itself, and Android can scan for them under Unknown tracker alerts. '
+      + 'In the register’s Bluetooth list its strength rises as you carry this Mac closer to it.']);
+  }
   section('notices', [perms, notes], () => {
     const out = notes.map(([title, text]) => el('div', { class: 'notice' }, el('b', { text: title }), el('span', { text })));
     if (perms.length) {
@@ -2649,20 +3413,23 @@ const ui = { data: null, stale: false, asking: false, airBusy: false };
 function render() {
   document.body.classList.toggle('stale', ui.stale);
   renderStatus(ui.data);
-  if (!ui.data) return;
+  if (!ui.data) { roomTakeUpdate(); return; }
   const m = derive(ui.data);
-  renderNotices(m);
   field.link = m.iface.associated && Number.isFinite(m.iface.rssi) ? m.iface.rssi : null;
   const model = liveModel(m);
   for (const d of heardDevices(m, true)) {
     model.signals.push({ id: 'd:' + d.mac, cat: 'lan', connected: false, name: d.name, rssi: d.rssi, band: d.band || 2, updates: null,
                          detail: [d.channel ? `Channel ${d.channel}` : null, BAND[d.band], `heard at ${clock(d.at)}`].filter(Boolean).join(' · ') });
   }
+  if (historyFeed(m, model)) roomFeed(m);
+  renderNotices(m);
   fieldUpdate(model);
   seatUpdate(m);
+  sinceUpdate();
   spectrumUpdate(m);
   channelsUpdate(m);
   registerUpdate(m);
+  roomTakeUpdate();
   bodyUpdate(m);
 }
 async function poll() {
@@ -2693,16 +3460,17 @@ if ('IntersectionObserver' in window) {
   const spy = new IntersectionObserver(entries => {
     for (const e of entries) if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.dataset.for === e.target.id));
   }, { rootMargin: '-45% 0px -50% 0px' });
-  for (const id of ['field', 'seat', 'spectrum', 'channels', 'register', 'body']) spy.observe(byId(id));
+  for (const id of ['field', 'seat', 'spectrum', 'channels', 'register', 'rooms', 'body']) spy.observe(byId(id));
 }
 if ('ResizeObserver' in window) {
   new ResizeObserver(() => {
     hudBoxes(); moveInk();
-    wake(fieldLoop); wake(ladderLoop); wake(doseLoop);
+    wake(fieldLoop); wake(ladderLoop); wake(doseLoop); wake(sinceLoop);
     for (const sp of spectra.values()) wake(sp.loop);
   }).observe(document.body);
 }
 wake(fieldLoop);
+roomsUpdate();
 
 // Each read of /api/state tells the app someone is looking, and the app only scans while someone
 // is, because a Wi-Fi scan slows this Mac's own connection for a few seconds. So ask only while

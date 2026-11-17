@@ -360,6 +360,47 @@ func runSelfTest() -> Bool {
     let numbersRight = ch6?.channel == 6 && ch44?.channel == 44 && ch37?.channel == 37
     check("channel numbers", numbersRight && ch37?.band == 6 && channelNumber(mhz: 900) == nil)
     check("address maths", ipValue("192.168.1.233") == 0xC0A8_01E9 && ipString(0xC0A8_0101) == "192.168.1.1")
+
+    // Bluetooth: made-up advertisements in the published formats.
+    func kindOf(_ mfg: [UInt8], services: Set<String> = [], data: [String: [UInt8]] = [:]) -> BLEKind {
+        let m = readManufacturerData(mfg)
+        return BLEClassifier.describe(company: m.company, apple: m.apple, services: services, serviceData: data)
+    }
+    let key = [UInt8](repeating: 0xAB, count: 22)
+    var awayTag: [UInt8] = [0x4C, 0x00, 0x12, 0x19, 0x10]
+    awayTag += key
+    let tagAway = kindOf(awayTag)
+    check("bluetooth: AirTag away from its owner", tagAway.group == "tracker" && tagAway.away == true && tagAway.kind == "AirTag, away from its owner")
+    let tagHome = kindOf([0x4C, 0x00, 0x12, 0x02, 0x14, 0x03])
+    check("bluetooth: AirTag with its owner nearby", tagHome.group == "tracker" && tagHome.away == false)
+    var otherTag: [UInt8] = [0x4C, 0x00, 0x12, 0x19, 0x20]
+    otherTag += key
+    check("bluetooth: another maker's Find My tag", kindOf(otherTag).group == "tracker")
+    var lostPods: [UInt8] = [0x4C, 0x00, 0x12, 0x19, 0x30]
+    lostPods += key
+    let pods = kindOf(lostPods)
+    check("bluetooth: lost AirPods are earbuds, not a tracker", pods.group == "audio" && pods.away == true)
+    let offline = kindOf([0x4C, 0x00, 0x12, 0x19, 0x00])
+    check("bluetooth: an offline iPhone is not a tracker", offline.group == "personal" && offline.away == nil)
+    let two = readManufacturerData([0x4C, 0x00, 0x10, 0x02, 0xAA, 0xBB, 0x0C, 0x01, 0xCC])
+    check("bluetooth: two Apple messages in one advert", two.apple[0x10]?.head == [0xAA, 0xBB] && two.apple[0x0C]?.length == 1)
+    var iBeaconBytes: [UInt8] = [0x4C, 0x00, 0x02, 0x15]
+    iBeaconBytes += [UInt8](repeating: 0x11, count: 21)
+    let iBeacon = kindOf(iBeaconBytes)
+    check("bluetooth: an iBeacon names no maker", iBeacon.group == "beacon" && iBeacon.vendor == nil)
+    let smart = kindOf([], services: ["FD5A"], data: ["FD5A": [0x13, 0x00]])
+    let smartHome = kindOf([], services: ["FD5A"], data: ["FD5A": [0x11]])
+    check("bluetooth: SmartTag away, and with its owner", smart.away == true && smart.group == "tracker" && smartHome.away == false)
+    let hub = kindOf([], services: ["FEAA"], data: ["FEAA": [0x41, 0x00]])
+    let eddystone = kindOf([], services: ["FEAA"], data: ["FEAA": [0x10, 0x00]])
+    check("bluetooth: Find Hub tag away; a plain Eddystone beacon is no tracker", hub.away == true && hub.group == "tracker" && eddystone.group == "beacon")
+    let tile = kindOf([], services: ["FEED"])
+    check("bluetooth: a Tile says nothing about its owner", tile.group == "tracker" && tile.away == nil && tile.vendor == "Tile")
+    let keyboard = kindOf([0x06, 0x00, 0x03, 0x00, 0x80], services: ["1812"])
+    check("bluetooth: keyboard by its service, maker by its code", keyboard.group == "input" && keyboard.vendor == "Microsoft")
+    let cut = kindOf([0x4C, 0x00, 0x12])
+    let cutLength = kindOf([0x4C, 0x00, 0x12, 0x19])
+    check("bluetooth: cut-off messages do not crash", cut.vendor == "Apple" && cutLength.group == "personal")
     return ok
 }
 
