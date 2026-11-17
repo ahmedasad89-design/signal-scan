@@ -1,0 +1,24 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel, macos-26]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compiler
+        run: swiftc --version
+      - name: Build and self-test
+        run: ./build.sh
+      - name: Installer, from this checkout
+        run: |
+          SIGNALSCAN_FROM="$PWD" SIGNALSCAN_APPS="$RUNNER_TEMP/apps" SIGNALSCAN_NO_OPEN=1 bash install.sh
+          "$RUNNER_TEMP/apps/Signal Scan.app/Contents/MacOS/SignalScan" --selftest

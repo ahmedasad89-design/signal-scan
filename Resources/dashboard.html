@@ -1,0 +1,2717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Scan</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #08090c; --bg2: #0e1015;
+    --paper: #efe9dd; --ink2: #aba597; --dim: #7a766c;
+    --hair: rgba(239, 233, 221, 0.09); --hair2: rgba(239, 233, 221, 0.17);
+    --mine: #8cc8ff; --other: #ff7a4a; --bt: #6fe3a8; --lan: #f0c75e; --warn: #ffc163;
+    --display: "Didot", "Bodoni 72", "Bodoni MT", ui-serif, Georgia, serif;
+    --serif: "Iowan Old Style", ui-serif, Palatino, Georgia, serif;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --pad: clamp(16px, 4vw, 56px);
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--paper); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body::after {
+    content: ''; position: fixed; inset: -60px; z-index: 90; pointer-events: none;
+    background-image: var(--grain, none); opacity: 0.03; mix-blend-mode: overlay; animation: grain 0.9s steps(5) infinite;
+  }
+  @keyframes grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-22px, 14px); } 40% { transform: translate(18px, -26px); } 60% { transform: translate(-12px, -8px); } 80% { transform: translate(26px, 20px); } 100% { transform: translate(0, 0); } }
+  ::selection { background: rgba(140, 200, 255, 0.28); }
+  a { color: inherit; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; }
+
+  /* ---------- masthead ---------- */
+  .mast {
+    position: fixed; z-index: 40; inset: 0 0 auto; height: 56px; display: flex; align-items: center; gap: clamp(16px, 3vw, 44px);
+    padding: 0 var(--pad); border-bottom: 1px solid var(--hair);
+    background: linear-gradient(180deg, rgba(8, 9, 12, 0.86), rgba(8, 9, 12, 0.55));
+    -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+    animation: drop 1.2s var(--ease) both;
+  }
+  @keyframes drop { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+  .brand { display: flex; align-items: center; gap: 11px; font: italic 400 21px/1 var(--display); text-decoration: none; white-space: nowrap; }
+  .brand svg { width: 20px; height: 20px; fill: none; stroke: var(--paper); stroke-width: 1.4; stroke-linecap: round; }
+  .brand svg circle { fill: var(--paper); stroke: none; }
+  .nav { display: flex; gap: clamp(14px, 2vw, 30px); }
+  .nav a {
+    position: relative; padding: 8px 0; font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    text-decoration: none; color: var(--dim); transition: color 0.5s var(--ease);
+  }
+  .nav a b { font-weight: 500; opacity: 0.6; margin-right: 7px; }
+  .nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--paper); transform: scaleX(0); transform-origin: left; transition: transform 0.7s var(--ease); }
+  .nav a:hover, .nav a.on { color: var(--paper); }
+  .nav a.on::after { transform: scaleX(1); }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 10px; font: 500 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink2); white-space: nowrap; }
+  .pulse { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--bt); animation: pulse 2.2s var(--ease) infinite; }
+  .pulse.off { background: var(--dim); animation: none; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(111, 227, 168, 0.6); } 75%, 100% { box-shadow: 0 0 0 10px rgba(111, 227, 168, 0); } }
+  @media (max-width: 1020px) { .nav { display: none; } }
+
+  main { padding-top: 56px; }
+  section { scroll-margin-top: 56px; }
+
+  /* ---------- notices ---------- */
+  .notice {
+    display: flex; gap: 16px; align-items: baseline; padding: 12px var(--pad); border-bottom: 1px solid var(--hair);
+    background: linear-gradient(90deg, rgba(255, 193, 99, 0.09), rgba(255, 193, 99, 0) 70%); font-size: 13px; color: var(--ink2);
+  }
+  .notice b { flex: none; font: 600 10px/1.4 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--warn); }
+  .notice strong { color: var(--paper); font-weight: 600; }
+
+  /* ---------- the stage ---------- */
+  .stage { position: relative; height: calc(100svh - 56px); min-height: 560px; overflow: hidden; background: var(--bg); isolation: isolate; }
+  .stage.live-cursor { cursor: none; }
+  .stage.live-cursor .pill { cursor: pointer; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #waves { opacity: 0; transition: opacity 2.6s var(--ease); }
+  #waves.on { opacity: 1; }
+  .stage:fullscreen { height: 100vh; }
+  .stale .stage canvas { filter: saturate(0.25) brightness(0.7); transition: filter 1.2s; }
+  .hud { position: absolute; z-index: 2; pointer-events: none; }
+  /* A soft pool of darkness behind each readout, so it stays legible over the waves. */
+  .hud::before { content: ''; position: absolute; z-index: -1; inset: -70px -90px -70px -80px; background: radial-gradient(closest-side, rgba(8, 9, 12, 0.82), rgba(8, 9, 12, 0.5) 60%, rgba(8, 9, 12, 0)); }
+  .eyebrow { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+  .numeral { margin: 12px 0 10px; font: 400 clamp(60px, 7vw, 104px)/0.86 var(--display); letter-spacing: -0.02em; font-variant-numeric: lining-nums; }
+  .numeral.sm { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 0; font-size: clamp(38px, 3.8vw, 56px); }
+  .numeral .u { font: 500 12px/1 var(--mono); letter-spacing: 0.1em; color: var(--dim); }
+  .hud-tl { left: var(--pad); top: clamp(22px, 5vh, 48px); max-width: 380px; }
+  .split { display: flex; flex-wrap: wrap; gap: 4px 18px; font: 12px/1.6 var(--mono); color: var(--ink2); }
+  .split span { display: inline-flex; align-items: center; gap: 9px; }
+  .hud-tl .hint { margin-top: 10px; }
+  .hud-tr { right: var(--pad); top: clamp(22px, 5vh, 48px); width: min(310px, 30vw); }
+  .board { list-style: none; margin: 14px 0 0; padding: 0; }
+  .board li { display: grid; grid-template-columns: 22px 12px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--hair); font-size: 13px; }
+  .board .rk { font: 500 10.5px var(--mono); color: var(--dim); }
+  .board .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board .db { font: 500 12px var(--mono); color: var(--ink2); }
+  .hud-bl { left: var(--pad); bottom: clamp(22px, 5vh, 44px); max-width: 300px; }
+  .hint { font-size: 12.5px; line-height: 1.5; color: var(--dim); }
+  .glyph { flex: none; display: inline-block; width: 9px; height: 9px; }
+  .glyph.sq { width: 8px; height: 8px; border: 1.5px solid currentColor; transform: rotate(45deg); box-shadow: inset 0 0 0 1.5px var(--bg), inset 0 0 0 4px currentColor; }
+  .glyph.dot { border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .glyph.ring { border-radius: 50%; border: 1.5px solid currentColor; }
+  .stage-actions { position: absolute; z-index: 3; right: var(--pad); bottom: clamp(18px, 4.6vh, 40px); display: flex; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--hair2);
+    background: rgba(8, 9, 12, 0.45); color: var(--ink2); font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    transition: color 0.4s var(--ease), border-color 0.4s var(--ease), background 0.4s var(--ease);
+  }
+  .pill:hover, .pill:focus-visible { color: var(--bg); background: var(--paper); border-color: var(--paper); outline: none; }
+  .pill[disabled] { opacity: 0.5; cursor: default; }
+  .stage-note { max-width: 80ch; margin: 0 auto; padding: 30px var(--pad) 0; font: italic 15px/1.65 var(--serif); color: var(--dim); text-align: center; }
+  @media (max-width: 900px) { .hud-tr { display: none; } }
+  @media (max-width: 600px) { .hud-bl .hint, .hud-tl .hint { display: none; } .stage-actions .pill:first-child { display: none; } }
+
+  /* ---------- chapters ---------- */
+  .chapter { max-width: 1320px; margin: 0 auto; padding: clamp(96px, 14vh, 160px) var(--pad) 0; }
+  .chap-head { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0 24px; align-items: end; padding-bottom: 28px; margin-bottom: clamp(40px, 7vh, 72px); border-bottom: 1px solid var(--hair); }
+  .chap-num { padding-bottom: 14px; font: 500 11px/1 var(--mono); letter-spacing: 0.16em; color: var(--dim); }
+  .chap-title { margin: 0; font: italic 400 clamp(52px, 8vw, 116px)/0.9 var(--display); letter-spacing: -0.02em; }
+  .chap-title .w { display: inline-block; }
+  .chap-lede { grid-column: 2; margin-top: 18px; max-width: 62ch; color: var(--ink2); font-size: 16px; }
+  @media (max-width: 640px) { .chap-head { grid-template-columns: 1fr; } .chap-lede { grid-column: 1; } .chap-num { padding-bottom: 10px; } }
+
+  .rv { opacity: 0; transform: translate3d(0, 32px, 0); transition: opacity 1.1s var(--ease), transform 1.3s var(--ease); transition-delay: calc(var(--i, 0) * 110ms); }
+  .rv.in { opacity: 1; transform: none; }
+  .chap-head .chap-title .w { clip-path: inset(-10% -6% 100% -6%); transform: translateY(35%); transition: clip-path 1.25s var(--ease), transform 1.25s var(--ease); }
+  .chap-head .chap-title .w + .w { transition-delay: 130ms; }
+  .chap-head.in .chap-title .w { clip-path: inset(-10% -6% -25% -6%); transform: none; }
+
+  /* ---------- your seat ---------- */
+  .seat { display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 1fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
+  .ladder { position: relative; height: 500px; }
+  .ladder canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .verdicts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(36px, 5vh, 56px) clamp(28px, 4vw, 64px); }
+  .verdict { padding-top: 18px; border-top: 1px solid var(--hair2); }
+  .verdict .state { margin: 16px 0 10px; font: 400 clamp(28px, 2.6vw, 38px)/1.12 var(--serif); letter-spacing: -0.005em; }
+  .verdict .state em { margin-left: 0.3em; font: 500 0.48em/1 var(--mono); letter-spacing: 0.02em; color: var(--ink2); vertical-align: 0.4em; white-space: nowrap; }
+  .verdict .fig { margin-bottom: 10px; font: 12px/1.6 var(--mono); color: var(--ink2); }
+  .verdict .fig[hidden] { display: none; }
+  .verdict .text { max-width: 54ch; color: var(--ink2); font-size: 14.5px; }
+  .verdict .act { margin-top: 18px; }
+  .verdict .act:empty { display: none; }
+  @media (max-width: 1000px) { .seat { grid-template-columns: 1fr; } .ladder { height: 400px; } }
+  @media (max-width: 640px) { .verdicts { grid-template-columns: 1fr; } }
+
+  /* ---------- spectrum ---------- */
+  .bands { display: grid; gap: clamp(48px, 8vh, 84px); }
+  .band { display: grid; grid-template-columns: minmax(160px, 230px) minmax(0, 1fr); gap: clamp(20px, 4vw, 56px); align-items: start; }
+  .band h3 { margin: 0 0 14px; font: italic 400 clamp(38px, 4vw, 58px)/0.95 var(--display); }
+  .band .facts { font: 12px/1.75 var(--mono); color: var(--ink2); white-space: pre-line; }
+  .band-plot { position: relative; height: clamp(230px, 31vh, 310px); }
+  .band-plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  @media (max-width: 760px) { .band { grid-template-columns: 1fr; } }
+
+  /* ---------- channels ---------- */
+  .chan-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: clamp(40px, 7vw, 112px); }
+  .chan-col > .eyebrow { margin-bottom: 10px; }
+  .chan-col > .cap { max-width: 52ch; margin-bottom: 24px; color: var(--ink2); font-size: 14px; }
+  .rail { display: grid; grid-template-columns: 136px minmax(0, 1fr) 124px; gap: 8px 22px; align-items: center; padding: 18px 0; border-top: 1px solid var(--hair); }
+  .rail .ch { font: 400 30px/1 var(--display); white-space: nowrap; color: var(--ink2); transition: color 0.6s var(--ease); }
+  @media (max-width: 520px) { .rail { grid-template-columns: 96px minmax(0, 1fr); } .rail .ch { font-size: 24px; } .rail .val { grid-column: 2; text-align: left; } }
+  .rail.here .ch, .rail.quiet .ch { color: var(--paper); }
+  .rail .track { position: relative; height: 1px; background: var(--hair2); }
+  .rail .fill { position: absolute; left: 0; top: -1.5px; width: 0; height: 4px; border-radius: 2px; background: var(--other); box-shadow: 0 0 14px rgba(255, 122, 74, 0.55); transition: width 1.4s var(--ease); }
+  .rail .val { font: 12px/1.3 var(--mono); color: var(--ink2); text-align: right; }
+  .rail .tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px 18px; font: 500 9.5px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .rail .tags:empty { display: none; }
+  .rail .tags .here { color: var(--paper); }
+  .rail .tags .here::before { content: '◆ '; color: var(--mine); }
+  .rail .tags .quiet { color: var(--paper); }
+  .rail .tags .quiet::before { content: '✓ '; color: var(--bt); }
+  @media (max-width: 920px) { .chan-cols { grid-template-columns: 1fr; } }
+
+  /* ---------- register ---------- */
+  .tabs { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--hair); overflow-x: auto; scrollbar-width: none; }
+  .tab { flex: none; padding: 16px 14px 18px; border: 0; background: none; cursor: pointer; color: var(--dim); font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; transition: color 0.4s var(--ease); }
+  .tab:first-child { padding-left: 0; }
+  .tab .n { margin-left: 8px; color: var(--ink2); }
+  .tab[aria-selected="true"], .tab:hover { color: var(--paper); }
+  .tab-ink { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--paper); transition: left 0.7s var(--ease), width 0.7s var(--ease); }
+  .reg-note { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; max-width: 84ch; margin: 22px 0 8px; color: var(--ink2); font-size: 14px; }
+  .reg-note .sub { flex-basis: 100%; color: var(--dim); font-size: 13px; }
+  .reg { list-style: none; margin: 0; padding: 0; }
+  .reg li { display: grid; grid-template-columns: 14px minmax(0, 1.05fr) minmax(0, 1.4fr) 180px; gap: 6px 22px; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--hair); }
+  .reg .who { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .reg .nm { font-size: 15.5px; overflow-wrap: anywhere; }
+  .reg .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+  .reg .tags b { padding: 2px 8px; border: 1px solid var(--hair2); border-radius: 999px; font: 500 9.5px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink2); }
+  .reg .meta { font: 11.5px/1.55 var(--mono); color: var(--dim); overflow-wrap: anywhere; }
+  .reg .lvl { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 12px; align-items: center; }
+  .reg .lvl[hidden] { display: none; }
+  .reg .bar { position: relative; height: 1px; background: var(--hair2); }
+  .reg .bar i { position: absolute; left: 0; top: -1.5px; height: 4px; border-radius: 2px; transition: width 1.1s var(--ease); }
+  .reg .db { font: 500 12px var(--mono); color: var(--ink2); text-align: right; }
+  .reg .link { grid-column: 2; justify-self: start; padding: 0; border: 0; background: none; cursor: pointer; font: 500 10px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); text-decoration: underline; text-decoration-color: var(--hair2); text-underline-offset: 4px; }
+  .reg .link:hover { color: var(--paper); }
+  .reg .link[hidden] { display: none; }
+  .reg-foot { padding-top: 26px; }
+  @media (max-width: 860px) { .reg li { grid-template-columns: 14px minmax(0, 1fr); } .reg .meta, .reg .lvl { grid-column: 2; } }
+
+  /* ---------- your body ---------- */
+  .dose { padding-bottom: 8px; }
+  .dose-head { max-width: 22ch; margin: 16px 0 34px; font: 400 clamp(40px, 5.2vw, 78px)/1.02 var(--display); letter-spacing: -0.015em; }
+  .dose-head em { font-style: italic; }
+  .dose-scale { position: relative; height: 150px; }
+  .dose-scale canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .dose-note { max-width: 76ch; margin-top: 18px; color: var(--ink2); font-size: 14.5px; }
+  .sleep { margin-top: clamp(64px, 10vh, 104px); padding-top: 26px; border-top: 1px solid var(--hair2); }
+  .sleep-head { max-width: 21ch; margin: 16px 0 22px; font: 400 clamp(32px, 3.9vw, 58px)/1.06 var(--display); letter-spacing: -0.012em; }
+  .sleep-head em { font-style: italic; }
+  .sleep-lede { max-width: 62ch; color: var(--ink2); font-size: 16px; }
+  .sleep-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 44px clamp(28px, 4vw, 56px); margin-top: 52px; }
+  .sleep-col { padding-top: 18px; border-top: 1px solid var(--hair2); }
+  .sleep-col h4 { margin: 14px 0 4px; font: italic 400 clamp(25px, 2.1vw, 31px)/1.1 var(--display); }
+  .sleep-col ul { margin: 12px 0 0; padding: 0; list-style: none; }
+  .sleep-col li { padding: 13px 0; border-top: 1px solid var(--hair); color: var(--ink2); font-size: 14.5px; }
+  .sleep-col li:first-child { border-top: 0; }
+  .sleep-col b, .trial li b { color: var(--paper); font-weight: 500; }
+  .verdict-tag.no i { color: var(--other); }
+  .sleep-read { max-width: 40em; margin: clamp(48px, 7vh, 72px) 0 0; font: 400 clamp(18px, 1.55vw, 22px)/1.55 var(--serif); color: var(--paper); }
+  .sleep-scale { max-width: 76ch; margin-top: 22px; color: var(--ink2); font-size: 14.5px; }
+  .sleep-scale:empty { display: none; }
+  .trial { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 80px); margin-top: clamp(64px, 10vh, 104px); padding-top: 26px; border-top: 1px solid var(--hair2); }
+  .trial h3 { margin: 14px 0 14px; font: italic 400 clamp(30px, 3vw, 44px)/1.05 var(--display); }
+  .trial p { max-width: 44ch; color: var(--ink2); font-size: 14.5px; }
+  .trial ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .trial li { position: relative; padding: 14px 0 14px 52px; border-top: 1px solid var(--hair); color: var(--ink2); font-size: 14.5px; counter-increment: step; }
+  .trial li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; top: 17px; font: 500 10.5px/1.4 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
+  @media (max-width: 760px) { .trial { grid-template-columns: 1fr; } }
+  .effects.four { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  /* ---------- blind sleep trial ---------- */
+  .tlog { margin-top: clamp(44px, 7vh, 72px); padding-top: 26px; border-top: 1px solid var(--hair2); }
+  .tlog h4 { max-width: 22ch; margin: 16px 0 14px; font: 400 clamp(30px, 3.3vw, 48px)/1.07 var(--display); letter-spacing: -0.012em; }
+  .tlog h4.wide { max-width: 26ch; font-size: clamp(32px, 3.9vw, 58px); }
+  .tlog h4 em { font-style: italic; }
+  .tlog p { max-width: 66ch; color: var(--ink2); font-size: 14.5px; }
+  .tlog p.fine { margin-top: 22px; color: var(--dim); font-size: 13px; }
+  .tlog .row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 26px; margin-top: 28px; }
+  .tlog .lab { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .tlog .fld { display: flex; flex-direction: column; gap: 8px; }
+  .tlog input { width: 150px; padding: 6px 2px; border: 0; border-bottom: 1px solid var(--hair2); border-radius: 0; background: none; color: var(--paper); font: 500 15px/1.3 var(--mono); outline: none; }
+  .tlog input[type=text] { width: min(78vw, 460px); font-family: var(--sans); }
+  .tlog input::placeholder { color: var(--dim); opacity: 0.7; }
+  .tlog input:focus { border-bottom-color: var(--paper); }
+  .tlog .pill.solid { color: var(--bg); background: var(--paper); border-color: var(--paper); }
+  .tlog .pill.solid:hover, .tlog .pill.solid:focus-visible { color: var(--paper); background: transparent; }
+  .tlog .pill[disabled] { opacity: 0.35; pointer-events: none; }
+  .pick { display: flex; flex-wrap: wrap; gap: 4px 4px; }
+  .pick button { padding: 6px 9px 7px; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--dim); cursor: pointer; font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; transition: color 0.3s var(--ease), border-color 0.3s var(--ease); }
+  .pick button:hover, .pick button:focus-visible { color: var(--paper); outline: none; }
+  .pick button[aria-pressed="true"] { color: var(--paper); border-bottom-color: var(--paper); }
+  .pick.big button { min-width: 1.5em; padding: 2px 9px 8px; font: 400 clamp(28px, 2.7vw, 40px)/1 var(--display); letter-spacing: 0; text-transform: none; }
+  .tlinks { display: flex; flex-wrap: wrap; gap: 8px 26px; margin-top: 40px; }
+  .tlink { padding: 0; border: 0; background: none; color: var(--dim); cursor: pointer; font: 500 10.5px/1.7 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: underline; text-decoration-color: var(--hair2); text-underline-offset: 4px; transition: color 0.3s; }
+  .tlink:hover, .tlink:focus-visible { color: var(--paper); outline: none; }
+  .ticks { display: flex; gap: 5px; max-width: 560px; margin-top: 20px; }
+  .ticks i { flex: 1; height: 20px; border-radius: 2px; background: var(--hair); }
+  .ticks i.done { background: var(--paper); }
+  .ticks i.skip { background: none; box-shadow: inset 0 0 0 1px var(--hair2); }
+  .ticks i.due { background: var(--warn); }
+  .ticks i.tonight { background: none; box-shadow: inset 0 0 0 1px var(--paper); }
+  .ask { margin-top: 30px; padding-left: 18px; border-left: 1px solid var(--warn); }
+  .ask p { color: var(--paper); }
+  .ask .row { margin-top: 16px; }
+  .plan { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0 34px; max-width: 920px; margin-top: 26px; }
+  .plan .n { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; padding: 11px 0; border: 0; border-top: 1px solid var(--hair); background: none; color: var(--ink2); font: 500 12px/1.4 var(--mono); text-align: left; }
+  .plan .n b { font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper); white-space: nowrap; }
+  .plan button.n { cursor: pointer; transition: color 0.3s; }
+  .plan button.n:hover, .plan button.n:focus-visible { color: var(--paper); outline: none; }
+  .res-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 28px clamp(28px, 4vw, 56px); max-width: 920px; margin-top: 40px; }
+  .res-fig { padding-top: 16px; border-top: 1px solid var(--hair2); }
+  .res-fig .v { margin: 12px 0 8px; color: var(--paper); font: 400 clamp(44px, 4.4vw, 66px)/1 var(--display); font-variant-numeric: lining-nums; }
+  .res-fig .s { color: var(--ink2); font-size: 13px; }
+  .dots { max-width: 920px; margin-top: 48px; }
+  .dots .r, .dots .ax { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 0 18px; align-items: end; }
+  .dots .r { padding-top: 26px; }
+  .dots .r .lab { padding-bottom: 5px; }
+  .dots .trk { position: relative; height: 46px; margin: 0 10px; border-bottom: 1px solid var(--hair2); }
+  .dots .trk i { position: absolute; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 0 2px var(--bg); }
+  .dots .trk u { position: absolute; bottom: 0; width: 1px; height: calc(100% + 6px); background: rgba(239, 233, 221, 0.45); text-decoration: none; }
+  .dots .trk u::after { content: attr(data-v); position: absolute; top: -15px; left: 0; transform: translateX(-50%); color: var(--paper); font: 500 10px/1 var(--mono); letter-spacing: 0.06em; white-space: nowrap; }
+  .dots .ax div { position: relative; height: 24px; margin: 0 10px; }
+  .dots .ax div span { position: absolute; top: 8px; transform: translateX(-50%); color: var(--dim); font: 500 10px/1 var(--mono); }
+  .res-notes { margin-top: 36px; }
+  .res-notes p { margin: 0 0 12px; }
+  .res-notes p:first-child { color: var(--paper); }
+  .tlog .scroll { max-width: 920px; margin-top: 36px; overflow-x: auto; }
+  .nights { width: 100%; border-collapse: collapse; color: var(--ink2); font: 500 12px/1.4 var(--mono); white-space: nowrap; }
+  .nights th { padding: 0 18px 10px 0; color: var(--dim); font-weight: 500; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-align: left; }
+  .nights td { padding: 9px 18px 9px 0; border-top: 1px solid var(--hair); }
+  .nights td.sc { color: var(--paper); }
+  .nights td:last-child { white-space: normal; font-family: var(--sans); }
+  @media (max-width: 520px) { .dots .r, .dots .ax { grid-template-columns: 62px minmax(0, 1fr); gap: 0 8px; } .tlog input { width: 120px; } }
+  .effects { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 44px clamp(28px, 4vw, 56px); margin-top: clamp(64px, 10vh, 104px); }
+  .effect { padding-top: 18px; border-top: 1px solid var(--hair2); }
+  .effect h3 { margin: 14px 0 12px; font: italic 400 clamp(30px, 2.6vw, 38px)/1.05 var(--display); }
+  .effect p { color: var(--ink2); font-size: 14.5px; }
+  .verdict-tag { display: flex; align-items: center; gap: 9px; font: 500 10px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper) !important; }
+  .effect .verdict-tag { font-size: 10px; }
+  .verdict-tag i { font-style: normal; color: var(--bt); }
+  .verdict-tag.open i { color: var(--warn); }
+  .habits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(28px, 5vw, 80px); margin-top: clamp(64px, 10vh, 104px); }
+  .habits ul { margin: 18px 0 0; padding: 0; list-style: none; }
+  .habits li { position: relative; padding: 12px 0 12px 26px; border-top: 1px solid var(--hair); color: var(--ink2); font-size: 14.5px; }
+  .habits li::before { content: '—'; position: absolute; left: 0; color: var(--dim); }
+  .sources { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline; margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--hair); font: 11.5px/1.6 var(--mono); }
+  .sources .eyebrow { width: 100%; margin-bottom: 4px; }
+  .sources a { color: var(--ink2); text-decoration: underline; text-decoration-color: var(--hair2); text-underline-offset: 4px; transition: color 0.3s; }
+  .sources a:hover { color: var(--paper); }
+  @media (max-width: 760px) { .habits { grid-template-columns: 1fr; } }
+
+  /* ---------- coda ---------- */
+  .coda .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(28px, 4vw, 64px); }
+  .coda h3 { margin: 0 0 12px; font: italic 400 26px/1.15 var(--serif); }
+  .coda p { color: var(--ink2); font-size: 14.5px; }
+  @media (max-width: 860px) { .coda .cols { grid-template-columns: 1fr; } }
+  footer {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 40px; max-width: 1320px; margin: 112px auto 0;
+    padding: 40px var(--pad) 56px; border-top: 1px solid var(--hair); font: 11px/1.75 var(--mono); color: var(--dim);
+  }
+  footer p { max-width: 70ch; }
+
+  /* ---------- tooltip ---------- */
+  .tip {
+    position: fixed; z-index: 60; pointer-events: none; max-width: 330px; padding: 11px 13px; border: 1px solid var(--hair2); border-radius: 10px;
+    background: rgba(14, 16, 21, 0.9); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); color: var(--paper); font: 12px/1.5 var(--sans);
+  }
+  .tip .v { margin-bottom: 5px; font: 400 24px/1.05 var(--display); }
+  .tip .n { display: flex; align-items: center; gap: 8px; font-weight: 600; overflow-wrap: anywhere; }
+  .tip .k { flex: none; width: 14px; height: 2px; border-radius: 1px; }
+  .tip .l { margin-top: 3px; font: 11px/1.5 var(--mono); color: var(--ink2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    body::after, .mast, .pulse { animation: none; }
+    .rv, .chap-head .chap-title .w { opacity: 1; transform: none; clip-path: none; transition: none; }
+    .rail .fill, .reg .bar i, .tab-ink, #waves, .nav a::after { transition: none; }
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <a class="brand" href="#field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.1"/><path d="M7.4 7.4a6.5 6.5 0 0 0 0 9.2M16.6 7.4a6.5 6.5 0 0 1 0 9.2M4.2 4.2a11 11 0 0 0 0 15.6M19.8 4.2a11 11 0 0 1 0 15.6"/></svg>Signal Scan</a>
+  <nav class="nav" aria-label="Sections">
+    <a href="#field" data-for="field"><b>01</b>Field</a>
+    <a href="#seat" data-for="seat"><b>02</b>Your seat</a>
+    <a href="#spectrum" data-for="spectrum"><b>03</b>Spectrum</a>
+    <a href="#channels" data-for="channels"><b>04</b>Channels</a>
+    <a href="#register" data-for="register"><b>05</b>Register</a>
+    <a href="#body" data-for="body"><b>06</b>Your body</a>
+  </nav>
+  <p id="live" class="status" aria-live="polite"></p>
+</header>
+
+<main>
+  <div id="notices"></div>
+
+  <section id="field" class="stage" data-tip="field" aria-label="The wave field">
+    <canvas id="waves" aria-hidden="true"></canvas>
+    <canvas id="marks" role="img" aria-label="Live picture of the signals around you"></canvas>
+    <div class="hud hud-tl rv" style="--i:2">
+      <p class="eyebrow" id="h-title">Signals reaching your seat</p>
+      <p class="numeral" id="h-count">0</p>
+      <p class="split" id="h-split"></p>
+    </div>
+    <div class="hud hud-tr rv" style="--i:3">
+      <p class="eyebrow">Hitting you hardest</p>
+      <ol class="board" id="h-board"></ol>
+    </div>
+    <div class="hud hud-bl rv" style="--i:4">
+      <p class="eyebrow">All of them together</p>
+      <p class="numeral sm"><span id="h-total">—</span><span class="u">dBm</span></p>
+    </div>
+    <div class="stage-actions rv" style="--i:5">
+      <a class="pill" href="#body">What it means for you ↓</a>
+      <button class="pill" type="button" id="fs">Full screen</button>
+    </div>
+  </section>
+  <p class="stage-note">Each signal sits closer to your Mac the stronger it arrives there. The dozen strongest send out waves drawn in proportion to their band, about 12 cm at 2.4 GHz and 6 cm at 5 GHz; the rest are the faint dots, all listed in the register. “All of them together” is every signal heard at this spot, added up. Where a signal sits around your Mac is not its real direction, which a laptop cannot sense. It is a picture of signal strength, not of any harm.</p>
+
+  <section id="seat" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">02</span>
+      <h2 class="chap-title"><span class="w">Your</span> <span class="w">seat</span></h2>
+      <p class="chap-lede">What the Mac measures at the spot where it sits. Your own connection is read once a second, so carry the laptop around and watch it move.</p>
+    </header>
+    <div class="seat">
+      <div class="ladder rv" id="ladder-box" style="--i:1"><canvas id="ladder" aria-hidden="true"></canvas></div>
+      <div class="verdicts">
+        <article class="verdict rv" style="--i:2" id="v-link"><p class="eyebrow">Your connection</p><h3 class="state"></h3><p class="fig"></p><p class="text"></p></article>
+        <article class="verdict rv" style="--i:3" id="v-chan"><p class="eyebrow">Your channel</p><h3 class="state"></h3><p class="fig"></p><p class="text"></p></article>
+        <article class="verdict rv" style="--i:4" id="v-noise"><p class="eyebrow">Background noise</p><h3 class="state"></h3><p class="fig"></p><p class="text"></p></article>
+        <article class="verdict rv" style="--i:5" id="v-lan"><p class="eyebrow">Devices on your network</p><h3 class="state"></h3><p class="fig"></p><p class="text"></p><div class="act"></div></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="spectrum" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">03</span>
+      <h2 class="chap-title"><span class="w">The</span> <span class="w">spectrum</span></h2>
+      <p class="chap-lede">Each shape is one Wi-Fi router: its width is the slice of the airwaves it occupies, its height how loudly this Mac hears it. Shapes that overlap compete for the same airtime.</p>
+    </header>
+    <div class="bands" id="bands"></div>
+  </section>
+
+  <section id="channels" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">04</span>
+      <h2 class="chap-title"><span class="w">Quieter</span> <span class="w">channels</span></h2>
+      <p class="chap-lede">The combined strength of other people's routers on each channel yours could use. Shorter is cleaner. A channel that is quiet here can still be busy in another room.</p>
+    </header>
+    <div class="chan-cols">
+      <div class="chan-col rv" style="--i:1">
+        <p class="eyebrow">2.4 GHz · the three that do not overlap</p>
+        <p class="cap">Routers on any other 2.4 GHz channel bleed into two of these at once.</p>
+        <div id="chan-2"></div>
+      </div>
+      <div class="chan-col rv" style="--i:2">
+        <p class="eyebrow">5 GHz · the 80 MHz blocks</p>
+        <p class="cap">Many routers avoid radar-shared blocks. Before using one a router must listen in silence for at least 1 minute (10 minutes for channels 116 to 128), and if it detects radar it must move away for 30 minutes.</p>
+        <div id="chan-5"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="register" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">05</span>
+      <h2 class="chap-title"><span class="w">The</span> <span class="w">register</span></h2>
+      <p class="chap-lede">Everything heard, loudest first. Rows only trade places when one is clearly ahead, so the list stays readable while readings wobble.</p>
+    </header>
+    <div class="tabs rv" role="tablist" aria-label="Kinds of signal">
+      <button class="tab" role="tab" type="button" data-tab="routers" aria-selected="true">Wi-Fi routers<span class="n" id="n-routers">0</span></button>
+      <button class="tab" role="tab" type="button" data-tab="bt" aria-selected="false">Bluetooth<span class="n" id="n-bt">0</span></button>
+      <button class="tab" role="tab" type="button" data-tab="lan" aria-selected="false">On your network<span class="n" id="n-lan">—</span></button>
+      <i class="tab-ink" id="tab-ink" aria-hidden="true"></i>
+    </div>
+    <p class="reg-note" id="reg-note"></p>
+    <ol class="reg" id="reg-list"></ol>
+    <div class="reg-foot"><button class="pill" type="button" id="reg-more" hidden></button></div>
+  </section>
+
+  <section id="body" class="chapter">
+    <header class="chap-head rv">
+      <span class="chap-num">06</span>
+      <h2 class="chap-title"><span class="w">Your</span> <span class="w">body</span></h2>
+      <p class="chap-lede">What the signals around your Mac mean for the person sitting there, according to the research so far, including where it is unsettled. A summary of the science, not medical advice.</p>
+    </header>
+    <div class="dose rv" style="--i:1">
+      <p class="eyebrow">How much is reaching you</p>
+      <p class="dose-head" id="dose-head">Waiting for readings…</p>
+      <div class="dose-scale" id="dose-box"><canvas id="dose" aria-hidden="true"></canvas></div>
+      <p class="dose-note" id="dose-note"></p>
+    </div>
+
+    <div class="sleep">
+      <div class="rv">
+        <p class="eyebrow">Sleep, looked at closely</p>
+        <h3 class="sleep-head">Radio signals do change the sleeping brain. Whether that <em>spoils</em> sleep is still open.</h3>
+        <p class="sleep-lede">If you sleep better with everything switched off, that is worth taking seriously. Here is what the research can and cannot say about it.</p>
+      </div>
+      <div class="sleep-cols">
+        <div class="sleep-col rv" style="--i:1">
+          <p class="verdict-tag"><i>✓</i>Established</p>
+          <h4>The sleeping brain reacts</h4>
+          <ul>
+            <li><b>Brain waves change.</b> Half an hour of phone-strength signal at the head before bed alters brain waves in the sleep that follows, mostly the 11–15 Hz “spindle” rhythm. Labs in Zurich and Australia have each found it more than once.</li>
+            <li><b>It is officially acknowledged.</b> The international body that sets the safety limits calls a small effect on brain waves “the only consistently observed finding”, and says what it means for the body is unclear.</li>
+            <li><b>People differ.</b> Volunteers who reacted in one study reacted again when retested. A 2025 Zurich study found a 5G signal changed sleep spindles only in people carrying one variant of a gene.</li>
+            <li><b>It happens inside the safety limit.</b> These experiments used the strength of a phone held to the head, which the limit allows.</li>
+          </ul>
+        </div>
+        <div class="sleep-col rv" style="--i:2">
+          <p class="verdict-tag open"><i>?</i>Not settled</p>
+          <h4>Whether sleep gets worse</h4>
+          <ul>
+            <li><b>In the lab, results are mixed.</b> In most of those experiments people fell asleep as fast, woke no more often and rated their sleep the same. A Swedish study of 48 people found about ten minutes less deep sleep after three hours of phone-strength signal in the evening.</li>
+            <li><b>Wi-Fi all night beside the bed</b> (34 men, 2020): sleep unchanged, with one small change in brain waves.</li>
+            <li><b>A baby monitor in the bedroom for a week</b> (12 adults, 2024): people rated their sleep worse and brain-wave power rose, while measured sleep did not change. The authors say it may be chance and needs a larger trial. Its lead author heads a college that teaches EMF testing.</li>
+            <li><b>A transmitter switched off.</b> When a Swiss short-wave radio station shut down in 1998, poor sleepers nearby slept better afterwards. It was a different kind of signal, and everyone knew it was off.</li>
+          </ul>
+        </div>
+        <div class="sleep-col rv" style="--i:3">
+          <p class="verdict-tag no"><i>✕</i>Points the other way</p>
+          <h4>Belief changes sleep too</h4>
+          <ul>
+            <li><b>397 people, 10 German villages.</b> A test phone mast near their homes was secretly on or off each night. Sleep was the same either way. People worried about masts slept worse even on the nights it was off.</li>
+            <li><b>43 people who blamed masts for bad sleep</b> got real or fake shielding over their beds, 465 nights in all. The real shield did no better, and about one in five slept better just believing they were shielded.</li>
+            <li><b>119 Swiss bedrooms.</b> Signals were measured in each and sleep tracked by wrist monitor for two weeks. More signal did not mean worse sleep.</li>
+            <li><b>14,800 Dutch adults.</b> How much signal people believed they were getting went with sleep problems. How much they actually got did not.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="sleep-read rv">So your experience fits two explanations, and research cannot yet choose between them for any one person. You may be someone whose sleep reacts to these signals; the brain-wave studies show real differences between people. Or it is everything else that changes when the house goes quiet: no standby lights, no notifications, no screen in the last hour, a deliberate wind-down, and expecting to sleep well. Each of those is known to improve sleep. A blind test at home can tell the two apart.</p>
+      <p class="sleep-scale rv" id="sleep-scale"></p>
+    </div>
+
+    <div class="trial">
+      <div class="rv">
+        <p class="eyebrow">Find out for yourself</p>
+        <h3>A blind test at home</h3>
+        <p>The only way to know whether it is the signals or the switching-off is to take away your knowledge of which night is which. It takes two weeks and one helper.</p>
+      </div>
+      <ol class="rv" style="--i:1">
+        <li><b>Start the trial below and hand the Mac to your helper.</b> The app draws a random plan, half the nights with Wi-Fi off and half with it on, and shows it only to them. They photograph it.</li>
+        <li><b>Each evening, once you are in bed, your helper follows the plan:</b> Wi-Fi off on every router, or left on. It must be back on before you get up, so every morning looks the same.</li>
+        <li><b>Keep every night the same otherwise.</b> Same bedtime, phone in flight mode and out of reach, router lights out of sight, no looking at router or camera apps.</li>
+        <li><b>Score each morning, here, before anything else.</b> How well you slept from 1 to 10, roughly how long it took to fall asleep, and your guess: was it on or off?</li>
+        <li><b>After the last night, reveal it together.</b> The app compares your on and off nights and tells you how likely the gap is to be luck.</li>
+      </ol>
+    </div>
+
+    <div class="tlog rv" id="trial-log" aria-live="polite"></div>
+
+    <div class="effects four">
+      <article class="effect rv" style="--i:1">
+        <p class="verdict-tag"><i>✓</i>No effect found</p>
+        <h3>Headaches</h3>
+        <p>In blinded experiments, where people did not know whether a transmitter was switched on, real exposure made no difference to headaches. A 2024 review of those experiments for the World Health Organization found no effect. Headaches at a desk are better explained by screen time, eye strain, posture, dehydration and stress.</p>
+      </article>
+      <article class="effect rv" style="--i:2">
+        <p class="verdict-tag"><i>✓</i>No effect found</p>
+        <h3>Mind and focus</h3>
+        <p>Two 2024 reviews for the WHO, one of laboratory experiments and one of long-term studies, found no evidence that radio signals harm memory, attention or thinking. Some measures remain uncertain because the studies were small or disagreed. The brain-wave changes seen in sleep also show up when awake, without any measurable effect on how people think.</p>
+      </article>
+      <article class="effect rv" style="--i:3">
+        <p class="verdict-tag"><i>✓</i>No link in the latest review</p>
+        <h3>Cancer</h3>
+        <p>In 2011 the WHO's cancer agency put radio waves in its "possibly carcinogenic" group, the category it uses when evidence is limited. A 2024 review for the WHO of 63 studies then found that mobile phone use likely does not raise the risk of brain tumours, even after ten years or more. Wi-Fi at your seat is far weaker than a phone pressed to your ear.</p>
+      </article>
+      <article class="effect rv" style="--i:4">
+        <p class="verdict-tag open"><i>?</i>Real symptoms, not reproduced blind</p>
+        <h3>Feeling it</h3>
+        <p>Some people get headaches, tiredness or tingling that they put down to wireless signals, and the symptoms are real. In 46 blinded studies, though, people could not tell when a field was on, and symptoms followed what they believed more than the actual exposure. Critics say those tests were too short and too crude to catch slower effects. If symptoms keep coming back, see a doctor.</p>
+      </article>
+    </div>
+    <div class="habits">
+      <div class="rv" style="--i:1">
+        <p class="eyebrow">Proven to help sleep and headaches</p>
+        <ul>
+          <li>Dim screens and stop scrolling for the last hour before bed, or turn on Night Shift.</li>
+          <li>Silence notifications at night with a Sleep focus, so nothing lights up or buzzes.</li>
+          <li>Keep the bedroom dark: cover or unplug anything with a standby light.</li>
+          <li>Every 20 minutes at a screen, look at something far away for 20 seconds.</li>
+        </ul>
+      </div>
+      <div class="rv" style="--i:2">
+        <p class="eyebrow">Cutting your exposure at night</p>
+        <ul>
+          <li>Set the router to switch its Wi-Fi off overnight, or move it out of the bedroom. Distance counts most: twice as far is a quarter of the signal.</li>
+          <li>Keep your phone off the pillow, and in flight mode if you can.</li>
+          <li>Use the speaker or earphones for long calls. A phone at your ear is the biggest radio exposure of most people's day, and this Mac cannot measure it.</li>
+          <li>These cost nothing. If they help you sleep, keep doing them.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sources rv"><span class="eyebrow">Sources</span>
+      <a href="https://www.icnirp.org/en/frequencies/radiofrequency/index.html" target="_blank" rel="noopener">ICNIRP on radio signals and brain waves</a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/21489004/" target="_blank" rel="noopener">Sleep brain waves after phone-like signals (Schmid 2012)</a>
+      <a href="https://doi.org/10.1002/bem.20691" target="_blank" rel="noopener">The same people react again (Loughran 2012)</a>
+      <a href="https://doi.org/10.1016/j.neuroimage.2025.121340" target="_blank" rel="noopener">5G, sleep spindles and a gene (Sousouri 2025)</a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/20857453/" target="_blank" rel="noopener">Less deep sleep after evening exposure (Lowden 2011)</a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/32408065/" target="_blank" rel="noopener">A night beside a Wi-Fi router (Danker-Hopfe 2020)</a>
+      <a href="https://frontiersin.org/journals/public-health/articles/10.3389/fpubh.2024.1481537/full" target="_blank" rel="noopener">Baby monitor and sleep, pilot trial (Bijlsma 2024)</a>
+      <a href="https://doi.org/10.1002/bem.20183" target="_blank" rel="noopener">Transmitter shut-down study (Altpeter 2006)</a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/20737608/" target="_blank" rel="noopener">Phone masts in 10 villages (Danker-Hopfe 2010)</a>
+      <a href="https://link.springer.com/doi/10.1007/s11818-008-0353-9" target="_blank" rel="noopener">Bedroom shielding study (Leitgeb 2008)</a>
+      <a href="https://doi.org/10.1371/journal.pone.0037455" target="_blank" rel="noopener">Bedroom signals and sleep (Mohler 2012)</a>
+      <a href="https://www.pubmed.gov/28398549/" target="_blank" rel="noopener">Believed and actual exposure (Martens 2017)</a>
+      <a href="https://www.icnirp.org/cms/upload/publications/ICNIRPrfgdl2020.pdf" target="_blank" rel="noopener">ICNIRP 2020 exposure guidelines</a>
+      <a href="https://www.arpansa.gov.au/who-review-reports-no-effect-radiofrequency-electromagnetic-field-exposure-self-reported-symptoms-human-experimental-studies" target="_blank" rel="noopener">WHO review: symptoms in blinded experiments (2024)</a>
+      <a href="https://www.arpansa.gov.au/who-systematic-review-finds-no-evidence-rf-emf-exposure-impacts-cognitive-performance" target="_blank" rel="noopener">WHO review: thinking and memory (2024)</a>
+      <a href="https://www.arpansa.gov.au/who-review-finds-no-link-between-mobile-phone-use-and-brain-cancer" target="_blank" rel="noopener">WHO review: phones and brain cancer (Karipidis 2024)</a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/19681059/" target="_blank" rel="noopener">46 blinded studies of sensitivity (Rubin 2010)</a>
+      <a href="https://doi.org/10.1073/pnas.1418490112" target="_blank" rel="noopener">Screens at bedtime and sleep (Chang 2015)</a>
+    </p>
+  </section>
+
+  <section id="blind" class="chapter coda">
+    <header class="chap-head rv">
+      <span class="chap-num">07</span>
+      <h2 class="chap-title"><span class="w">What</span> <span class="w">it</span> <span class="w">cannot</span> <span class="w">hear</span></h2>
+    </header>
+    <div class="cols">
+      <div class="rv" style="--i:1"><h3>Mobile networks</h3><p>5G, LTE and GSM. A Mac has no cellular radio, so phone-network signal cannot be measured from here. Your phone is the only cellular sensor in the house; its field-test screen shows the real figure. Drawing those bands would need a USB software-defined radio.</p></div>
+      <div class="rv" style="--i:2"><h3>How loud each gadget is</h3><p>The scan hears routers, which announce themselves about ten times a second, and Bluetooth devices that advertise. A TV or camera on Wi-Fi only transmits when it has something to send; measuring it needs a packet capture that takes the Mac off Wi-Fi while it listens.</p></div>
+      <div class="rv" style="--i:3"><h3>Everything else</h3><p>Microwave ovens, baby monitors, Zigbee and Thread gear, and stray emissions from electronics only show up indirectly, as a higher background-noise figure, and only while this Mac is connected on the 2.4 GHz band, where most of them transmit.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Readings are what this Mac hears at its current position. Walls and distance change them quickly, and neighbours' devices are counted along with yours. No reading leaves this Mac: the page is served to this computer only.</p>
+  <p>While this page is on screen the Mac re-scans the air every few seconds, and each scan makes its own Wi-Fi a little slower for about five seconds. Switch tabs during a call: scanning pauses within ten seconds.</p>
+</footer>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const FLOOR = -100;      // weakest signal any scale shows
+const BAR_TOP = -30;     // a full bar in the lists
+const PLOT_TOP = -20;    // top edge of the spectrum plots
+const AUDIBLE = -82;     // below this a neighbour is too faint to make your devices wait
+const BAND = { 2: '2.4 GHz', 5: '5 GHz', 6: '6 GHz' };
+const WAVES = { 2: 'about 12 cm waves', 5: '5 to 6 cm waves', 6: '4 to 5 cm waves' };
+const GEN = { be: 'Wi-Fi 7', ax: 'Wi-Fi 6', ac: 'Wi-Fi 5', n: 'Wi-Fi 4', g: '802.11g', a: '802.11a', b: '802.11b' };
+const C = { mine: 'var(--mine)', other: 'var(--other)', bt: 'var(--bt)', lan: 'var(--lan)' };
+
+/* ---------- small DOM helpers (names from the air are untrusted: always textContent) ---------- */
+function build(create, tag, attrs, kids) {
+  const node = create(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'text') node.textContent = v;
+    else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+}
+const el = (tag, attrs, ...kids) => build(t => document.createElement(t), tag, attrs, kids);
+const sv = (tag, attrs, ...kids) => build(t => document.createElementNS(SVGNS, t), tag, attrs, kids);
+const byId = id => document.getElementById(id);
+
+const neg = v => String(v).replace('-', '−');
+const dbm = v => (v == null || !isFinite(v) ? 'no reading' : `${neg(Math.round(v))} dBm`);
+const count = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const barPct = v => clamp((v - FLOOR) / (BAR_TOP - FLOOR), 0.02, 1) * 100;
+const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+/* ---------- where a network sits in the spectrum ---------- */
+function centre(band, ch) {
+  if (band === 2) return ch === 14 ? 2484 : 2407 + 5 * ch;
+  return (band === 5 ? 5000 : 5950) + 5 * ch;
+}
+// The slice of spectrum [low, high] in MHz that a network occupies.
+function block(n) {
+  const f = centre(n.band, n.channel), w = n.width || 20;
+  if (w === 20) return [f - 10, f + 10];
+  if (n.band === 2) {
+    const above = n.secOffset === 1 || (n.secOffset !== -1 && n.channel <= 7);
+    return above ? [f - 10, f + 30] : [f - 30, f + 10];
+  }
+  const base = n.band === 5 ? (n.channel >= 149 ? 149 : n.channel >= 100 ? 100 : 36) : 1;
+  const span = w / 5;   // wide channels are fixed groups of 20 MHz channels
+  const low = centre(n.band, base + Math.floor((n.channel - base) / span) * span) - 10;
+  return [low, low + w];
+}
+const overlap = (a, b) => Math.max(0, Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo));
+
+/* ---------- which routers are yours ---------- */
+// Worked out from the network this Mac is on: the same name family ("Home", "Home-5G",
+// "Home 2.4g") or a sibling hardware address (the other band of the same box). Each network
+// name can be overridden with the "Mark as mine" / "Not mine" buttons; the answer is remembered.
+let claims = {};
+try { claims = JSON.parse(localStorage.getItem('signalscan.claims') || '{}') || {}; } catch (e) { /* private window */ }
+function setClaim(names, mine) {
+  for (const s of names) claims[s] = mine;
+  try { localStorage.setItem('signalscan.claims', JSON.stringify(claims)); } catch (e) { /* ignore */ }
+  for (const k of Object.keys(sigs)) delete sigs[k];
+  render();
+}
+const family = s => s.trim().replace(/[\s_\-]*(2\.4|2|5|6)\s*g(hz)?$/i, '').trim().toLowerCase();
+// Addresses given to one physical router share the maker's prefix and differ in one place only:
+// the last byte counts up (2.4 GHz, 5 GHz, wired side), or the high half of one middle byte is
+// swapped (BB / CB / FB). The first byte is often rewritten for extra network names, so it is
+// left out of the comparison. A different middle byte with the same last byte is another unit
+// of the same model, not the same box.
+function sibling(a, b) {
+  if (!a || !b) return false;
+  const x = a.split(':'), y = b.split(':');
+  if (x.length !== 6 || y.length !== 6 || x[1] !== y[1] || x[2] !== y[2]) return false;
+  const diff = [3, 4, 5].filter(i => x[i] !== y[i]);
+  return diff.length === 0 || (diff.length === 1 && (diff[0] === 5 || x[diff[0]][1] === y[diff[0]][1]));
+}
+
+// The IEEE list uses legal names ("Samsung Electronics Co.,Ltd"): trim them to something
+// readable. Two entries are placeholders, not makers, and say nothing about the device.
+function tidyMaker(v) {
+  if (!v || /^(private|ieee registration authority)$/i.test(v.trim())) return null;
+  let s = v.trim().replace(/,\s+an?\s+\S+\s+company$/i, ''), prev;
+  do {
+    prev = s;
+    s = s.replace(/[\s,]+(?:(?:&|\+|and)\s+)?(inc|incorporated|corp|corporation|corporate|co|company|ltd|limited|llc|gmbh|plc|pte|pty|ag|bv|sa|srl|spa|kg|oy|ab)\.?$/i, '').replace(/[\s,.]+$/, '');
+  } while (s !== prev && s.length);
+  return s || v.trim();
+}
+
+// Companies whose radio chips and modules sit inside other brands' products, so the address
+// of, say, an LG television can be registered to its Wi-Fi module's maker instead of LG.
+const INSIDE = /^(espressif|tuya|azurewave|murata|hon hai|lite-?on|realtek|mediatek|qualcomm|broadcom|texas instruments|intel|arcadyan|wistron|ampak)\b/i;
+
+function wifiName(n, redacted) {
+  if (n.names.length) return n.names[0] + (n.names.length > 1 ? ` +${n.names.length - 1} more` : '');
+  if (n.current) return 'Your Wi-Fi';
+  return redacted ? `Wi-Fi router on channel ${n.channel}` : 'Hidden network';
+}
+// What the router says about itself (maker and model) beats the registry's company name.
+function radioMaker(n) {
+  const said = (n.maker || '').replace(/[\s.,]+$/, ''), model = n.model || '';
+  return (model.toLowerCase().startsWith(said.toLowerCase()) ? model : [said, model].filter(Boolean).join(' ')) || tidyMaker(n.vendor);
+}
+function wifiMeta(n) {
+  const parts = [`Channel ${n.channel}`, BAND[n.band], `${n.width} MHz wide`];
+  if (n.security) parts.push(n.security);
+  if (GEN[n.phy]) parts.push(GEN[n.phy]);
+  if (n.stations != null) parts.push(count(n.stations, 'device') + ' connected');
+  if (n.utilization != null) parts.push(`${Math.round(n.utilization * 100)}% of airtime busy`);
+  const maker = radioMaker(n);
+  if (maker) parts.push(maker);
+  if (n.names.length > 1) parts.push(`also sends ${n.names.slice(1).join(', ')}`);
+  return parts.join(' · ');
+}
+
+// One router radio usually broadcasts several network names (main, guest, a hidden one for its
+// mesh). They are one transmitter, so they are drawn and counted once.
+function sameRadio(a, b) {
+  if (a.band !== b.band || a.channel !== b.channel || a.width !== b.width) return false;
+  // Strengths only compare when both were measured in the same scan: the app keeps an
+  // address for 40 s after it was last heard, so an older reading may be from another spot.
+  // (Two separate boxes with near-identical addresses on one channel, such as mesh units,
+  // are drawn as one while either is a cached reading.)
+  const sameScan = a.lastSeen == null || b.lastSeen == null || a.lastSeen === b.lastSeen;
+  if (sameScan && Math.abs(a.rssi - b.rssi) > 3) return false;
+  return !a.bssid || !b.bssid || sibling(a.bssid, b.bssid);
+}
+// A router only announces its make and model in some of its broadcasts, so remember what
+// earlier scans heard for each address.
+const knownModels = new Map();
+function withKnownModel(e) {
+  if (!e.bssid) return e;
+  if (e.maker || e.model) { knownModels.set(e.bssid, { maker: e.maker, model: e.model }); return e; }
+  const known = knownModels.get(e.bssid);
+  return known ? { ...e, ...known } : e;
+}
+function groupRadios(entries) {
+  const radios = [];
+  // Freshest reading first, so a merged radio shows the strength measured here and now.
+  for (const e of entries.map(withKnownModel).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0) || b.rssi - a.rssi)) {
+    const home = radios.find(r => sameRadio(r, e));
+    if (!home) { radios.push({ ...e, members: 1, names: e.ssid ? [e.ssid] : [], addrs: [e.bssid] }); continue; }
+    home.addrs.push(e.bssid);
+    home.members += 1;
+    if (e.ssid && !home.names.includes(e.ssid)) home.names.push(e.ssid);
+    if (e.current) { home.current = true; home.bssid = e.bssid; }
+    for (const k of ['noise', 'stations', 'utilization', 'maker', 'model', 'vendor', 'secOffset']) if (home[k] == null && e[k] != null) home[k] = e[k];
+  }
+  const seen = {};
+  for (const r of radios) {
+    const key = `${r.band}-${r.channel}-${r.width}`;
+    seen[key] = (seen[key] || 0) + 1;
+    r.id = r.bssid || `${key}-${seen[key]}`;
+  }
+  // Only some of a router's radios announce its make and model; the others borrow it.
+  for (const r of radios) {
+    if (r.maker || r.model || !r.bssid) continue;
+    const kin = radios.find(o => o !== r && (o.maker || o.model) && sibling(o.bssid, r.bssid));
+    if (kin) { r.maker = kin.maker; r.model = kin.model; }
+  }
+  return radios;
+}
+
+function derive(st) {
+  // "link" is the once-a-second reading of the connection this Mac is on (newer app builds);
+  // without it, fall back to the reading taken at each full scan.
+  const w = st.wifi || {}, iface = st.link || w.iface || {}, redacted = !!w.redacted;
+  // The live link knows which address this Mac is on now; the scan list's flag can be a scan
+  // (or a 40 s cache entry) behind after switching routers.
+  const linkKnows = !iface.associated || !!iface.bssid;
+  const nets = groupRadios((w.networks || []).map(e => (linkKnows ? { ...e, current: !!iface.associated && e.bssid === iface.bssid } : e)));
+  const myFamily = iface.ssid ? family(iface.ssid) : '';
+  for (const n of nets) {
+    const inferred = n.names.some(s => s === iface.ssid || (myFamily.length >= 3 && family(s) === myFamily)) || sibling(n.bssid, iface.bssid);
+    const said = n.names.map(s => claims[s]);
+    n.mine = !!n.current || said.includes(true) || (inferred && !said.includes(false));
+    // Lead with the name this Mac is actually joined to when a radio sends several.
+    if (iface.ssid && n.names.includes(iface.ssid)) n.names = [iface.ssid, ...n.names.filter(s => s !== iface.ssid)];
+  }
+  // Another radio of a box that carries your network (its 6 GHz side under a different name, say) is yours too.
+  const yours = nets.filter(n => n.mine);
+  for (const n of nets) {
+    if (!n.mine && !n.names.some(s => claims[s] === false) && yours.some(o => sibling(o.bssid, n.bssid))) n.mine = true;
+  }
+  let cur = nets.find(n => n.current) || null;
+  if (!cur && iface.associated) {
+    // Names are hidden, or this scan missed our own router: pick it out by channel and strength.
+    let best = null, onChannel = 0;
+    for (const n of nets) {
+      if (n.band !== iface.band || n.channel !== iface.channel || n.mine) continue;
+      onChannel += 1;
+      const d = Math.abs(n.rssi - iface.rssi);
+      if (!best || d < best.d) best = { n, d };
+    }
+    // The link reading is a second old, the scan's can be ten or more, and the two differ by a few
+    // dB even at rest: when only one router is on our channel it is ours however far apart they are.
+    // (A router may be wider than this Mac's link to it, never narrower.)
+    if (redacted && best && (best.d <= 8 || (onChannel === 1 && best.n.width >= iface.width))) {
+      cur = best.n; cur.guess = true;
+    } else {
+      cur = { id: 'this-link', synthetic: true, members: 1, names: iface.ssid ? [iface.ssid] : [], rssi: iface.rssi, noise: iface.noise,
+              channel: iface.channel, band: iface.band, width: iface.width, phy: iface.phy, security: iface.security };
+      nets.push(cur);
+    }
+    cur.mine = true; cur.current = true;
+  }
+  // The connected router's strength comes from the live link reading, which is fresher than the scan's.
+  if (cur && iface.associated && iface.rssi != null) cur.rssi = iface.rssi;
+  for (const n of nets) {
+    [n.lo, n.hi] = block(n);
+    n.label = wifiName(n, redacted);
+  }
+  const others = nets.filter(n => !n.mine);
+  // Everything overlapping the channel this Mac is on, including a second router of your own:
+  // two of your own routers on overlapping channels slow each other down just like a neighbour's.
+  const sharers = cur ? nets.filter(n => n !== cur && n.band === cur.band && overlap(n, cur) > 0).sort((a, b) => b.rssi - a.rssi) : [];
+  const audible = sharers.filter(n => n.rssi >= AUDIBLE);
+  // On 2.4 GHz a neighbour centred on a different channel collides instead of taking turns.
+  const offCentre = audible.filter(n => cur.band === 2 && n.channel !== cur.channel);
+  const ble = ((st.ble || {}).devices || []).slice().sort((a, b) => b.rssi - a.rssi);
+  const lan = ((st.lan || {}).devices || []).slice();
+  return { st, iface, redacted, nets, cur, others, sharers, audible, offCentre, ble, lan };
+}
+
+/* ---------- re-render a block only when what it shows has changed ---------- */
+const sigs = {};
+function section(id, sig, make) {
+  const s = JSON.stringify(sig);
+  if (sigs[id] === s) return;
+  sigs[id] = s;
+  const host = byId(id);
+  const nodes = make(host);
+  if (nodes) host.replaceChildren(...[].concat(nodes).filter(Boolean));
+}
+
+/* ---------- tooltips: one delegated handler, content looked up by key ---------- */
+const tips = new Map();
+const tipEl = byId('tip');
+function setTips(prefix, entries) {
+  for (const k of [...tips.keys()]) if (k.startsWith(prefix)) tips.delete(k);
+  for (const [k, v] of entries) tips.set(prefix + k, v);
+}
+function tipBody(value, colour, name, lines) {
+  return [el('div', { class: 'v', text: value }),
+          el('div', { class: 'n' }, el('span', { class: 'k', style: `background:${colour}` }), name),
+          ...lines.filter(Boolean).map(l => el('div', { class: 'l', text: l }))];
+}
+function showTip(target, x, y) {
+  const make = tips.get(target.getAttribute('data-tip'));
+  const body = make && make();          // a target may have nothing to say just now (empty space in the arena)
+  if (!body || !body.length) { tipEl.hidden = true; return; }
+  tipEl.replaceChildren(...body);
+  tipEl.hidden = false;
+  const r = tipEl.getBoundingClientRect();
+  let left = x + 14, top = y + 14;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = y - r.height - 14;
+  tipEl.style.left = Math.max(8, left) + 'px';
+  tipEl.style.top = Math.max(8, top) + 'px';
+}
+const tipTarget = e => (e.target instanceof Element ? e.target.closest('[data-tip]') : null);
+document.addEventListener('pointermove', e => { const t = tipTarget(e); if (t) showTip(t, e.clientX, e.clientY); else tipEl.hidden = true; });
+document.addEventListener('pointerleave', () => { tipEl.hidden = true; });
+document.addEventListener('focusin', e => { const t = tipTarget(e); if (t) { const r = t.getBoundingClientRect(); showTip(t, r.left + r.width / 2, r.top + 8); } });
+document.addEventListener('focusout', () => { tipEl.hidden = true; });
+
+/* ---------- how crowded each usable channel is ---------- */
+const OPTIONS = {
+  2: [1, 6, 11].map(ch => ({ label: `Channel ${ch}`, lo: 2407 + 5 * ch - 10, hi: 2407 + 5 * ch + 10 })),
+  5: [[36, 48], [52, 64, true], [100, 112, true], [116, 128, true], [132, 144, true], [149, 161]]
+       .map(([a, b, radar]) => ({ label: `Channels ${a} to ${b}`, lo: 5000 + 5 * a - 10, hi: 5000 + 5 * b + 10, radar: !!radar })),
+};
+function channelStats(m, band) {
+  const others = m.others.filter(n => n.band === band);
+  const rows = OPTIONS[band].map(o => {
+    let mw = 0, n = 0;
+    for (const net of others) {
+      const share = overlap(net, o) / (net.hi - net.lo);   // how much of that network lands in this channel
+      if (share <= 0) continue;
+      n += 1;
+      mw += Math.pow(10, net.rssi / 10) * share;
+    }
+    const yours = m.nets.filter(net => net.mine && net.band === band && overlap(net, o) > 0);
+    return { ...o, n, level: mw > 0 ? 10 * Math.log10(mw) : null, connected: yours.some(net => net.current), own: yours.filter(net => !net.current).length };
+  });
+  // Only call one out as quietest when it is clearly so (3 dB or more below the runner-up).
+  const level = r => (r.level == null ? -200 : r.level);
+  const ranked = rows.slice().sort((a, b) => level(a) - level(b));
+  if (level(ranked[1]) - level(ranked[0]) >= 3) ranked[0].quietest = true;
+  return rows;
+}
+
+// A Bluetooth device rarely gives a name, so fall back to what kind of thing it is, then to its maker.
+const bleName = d => d.name || d.kind || (d.vendor ? `${d.vendor} device` : 'Unnamed device');
+const bleMeta = d => [d.name || d.kind ? d.vendor : null, d.name ? d.kind : null].filter(Boolean).join(' · ');
+
+// The two buttons above. The marker header is what lets the app tell its own page from any other.
+async function networkCommand(what) {
+  ui.asking = true;
+  render();
+  try { await fetch('/api/network/' + what, { method: 'POST', headers: { 'X-Signal-Scan': '1' } }); } catch (e) { /* the next poll shows the outcome */ }
+  // The app answers at once but needs two or three seconds to search. Keep the button busy until
+  // the reading shows the change (8 s at most), so it is not pressed again meanwhile.
+  const want = what === 'trust';
+  for (let i = 0; i < 16 && ((ui.data || {}).lan || {}).trusted !== want; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    await poll();
+  }
+  ui.asking = false;
+  render();
+}
+
+/* ---------- everything with a strength reading, as one list for the wave field ---------- */
+function liveModel(m) {
+  const fast = !!m.st.link;   // newer app builds read the connected router and Bluetooth every second
+  const signals = m.nets.map(n => ({
+    // A merged radio is known by the smallest of its addresses, so its attacker keeps its place
+    // whichever of those addresses a scan happened to hear freshest.
+    id: 'w:' + ((n.addrs || []).filter(Boolean).sort()[0] || n.id), cat: n.mine ? 'mine' : 'other', connected: !!n.current, name: n.label,
+    detail: [`Channel ${n.channel}`, BAND[n.band], radioMaker(n)].filter(Boolean).join(' · '),
+    rssi: n.rssi, band: n.band, updates: n.current && fast ? 'every second' : 'every 10 s',
+  }));
+  for (const d of m.ble) {
+    signals.push({ id: 'b:' + d.id, cat: 'bt', connected: false, name: bleName(d), detail: bleMeta(d),
+                   rssi: d.rssi, band: 2, updates: fast ? 'every second' : 'every 2 s' });
+  }
+  return { signals, noise: m.iface.noise, stale: ui.stale };
+}
+
+/* ================================ presentation ================================ */
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HEX = { mine: '#8cc8ff', other: '#ff7a4a', bt: '#6fe3a8', lan: '#f0c75e' };
+const RGB = { mine: [0.72, 0.87, 1.0], other: [1.0, 0.78, 0.66], bt: [0.72, 0.96, 0.84], lan: [1.0, 0.93, 0.72] };   // wave tints: pale, so the field stays clean
+const PAPER = '#efe9dd', BG = '#08090c';
+const F_MONO = '"SF Mono", ui-monospace, Menlo, monospace';
+const F_SANS = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const strength = rssi => clamp((rssi - FLOOR) / (BAR_TOP - FLOOR), 0, 1);   // 0 barely audible, 1 right beside a transmitter
+const word = rssi => (rssi >= -60 ? 'Strong' : rssi >= -70 ? 'Good' : rssi >= -80 ? 'Weak' : 'Faint');
+const setText = (node, text) => { if (node && node.textContent !== text) node.textContent = text; };
+const fmtDb = v => (Number.isFinite(v) ? neg(Math.round(v)) : '—');
+const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+const hash01 = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+const sumDbm = list => { let mw = 0; for (const v of list) if (Number.isFinite(v)) mw += Math.pow(10, v / 10); return mw > 0 ? 10 * Math.log10(mw) : null; };
+// A router radio that sends several network names is known by the smallest of its addresses,
+// so it keeps its identity whichever of them a scan happened to hear freshest.
+const radioKey = n => (n.addrs || []).filter(Boolean).sort()[0] || n.id;
+
+/* ---------- one animation clock for everything that moves ---------- */
+const loops = new Set();
+let hubRaf = 0, hubLast = 0;
+function wake(loop) { loops.add(loop); if (!hubRaf && !document.hidden) hubRaf = requestAnimationFrame(hub); }
+function hub(t) {
+  hubRaf = 0;
+  const dt = hubLast ? Math.min(0.25, Math.max(0.001, (t - hubLast) / 1000)) : 1 / 60;
+  hubLast = t;
+  for (const loop of [...loops]) {
+    let keep = false;
+    try { keep = loop(t, dt); } catch (e) { console.error(e); }
+    if (!keep) loops.delete(loop);
+  }
+  if (loops.size && !document.hidden) hubRaf = requestAnimationFrame(hub); else hubLast = 0;
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && loops.size && !hubRaf) hubRaf = requestAnimationFrame(hub); });
+
+// A spring, integrated in small steps so it settles at the same pace whatever the frame rate.
+function springStep(x, v, target, K, dt) {
+  const D = 2 * Math.sqrt(K) * 0.95;
+  let n = Math.max(1, Math.ceil(dt / 0.016));
+  const h = dt / n;
+  for (; n > 0; n--) { v += (K * (target - x) - D * v) * h; x += v * h; }
+  return [x, v];
+}
+
+/* ---------- numbers that count to their new value ---------- */
+const tweens = new Map();
+function tweenTo(node, to, fmt, dur = 1300) {
+  if (!node || node.__to === to || (Number.isNaN(to) && Number.isNaN(node.__to))) return;
+  node.__to = to;
+  const from = node.__val;
+  if (still || !Number.isFinite(to) || !Number.isFinite(from)) { node.__val = to; tweens.delete(node); setText(node, fmt(to)); return; }
+  tweens.set(node, { from, to, start: performance.now(), dur, fmt });
+  wake(stepTweens);
+}
+function stepTweens(t) {
+  for (const [node, tw] of tweens) {
+    const k = clamp((t - tw.start) / tw.dur, 0, 1), e = 1 - Math.pow(1 - k, 4);
+    node.__val = tw.from + (tw.to - tw.from) * e;
+    setText(node, tw.fmt(node.__val));
+    if (k >= 1) tweens.delete(node);
+  }
+  return tweens.size > 0;
+}
+
+/* ---------- what is on screen, and revealing chapters as they arrive ---------- */
+const onscreen = new WeakMap();
+const watch = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+  for (const e of entries) { onscreen.set(e.target, e.isIntersecting); if (e.isIntersecting && e.target.__wake) e.target.__wake(); }
+}, { rootMargin: '160px 0px' }) : null;
+const isOn = node => (onscreen.has(node) ? onscreen.get(node) : true);
+function track(node, fn) { node.__wake = fn; if (watch) watch.observe(node); }
+const reveal = 'IntersectionObserver' in window && !still ? new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); reveal.unobserve(e.target); }
+}, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }) : null;
+function revealIn(node) { if (reveal) reveal.observe(node); else node.classList.add('in'); }
+document.querySelectorAll('.rv').forEach(revealIn);
+
+// Put `nodes` into `parent` in this order; anything that moved glides to its new place.
+function reorder(parent, nodes) {
+  const before = still ? null : new Map(nodes.filter(n => n.parentNode === parent).map(n => [n, n.getBoundingClientRect().top]));
+  let ref = parent.firstChild;
+  for (const n of nodes) {
+    if (n === ref) { ref = ref.nextSibling; continue; }
+    parent.insertBefore(n, ref);
+  }
+  const keep = new Set(nodes);
+  for (const c of [...parent.children]) if (!keep.has(c)) c.remove();
+  if (!before) return;
+  for (const n of nodes) {
+    const b = before.get(n);
+    if (b == null) { n.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 600, easing: EASE }); continue; }
+    const dy = b - n.getBoundingClientRect().top;
+    if (Math.abs(dy) > 0.5) n.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 700, easing: EASE });
+  }
+}
+// Strongest first, but neighbours only trade places when one is clearly ahead, so a 2 to 4 dB
+// wobble never reshuffles a list.
+function stableOrder(prev, items, key, margin) {
+  const byKey = new Map(items.map(it => [it.id, it]));
+  const order = prev.filter(id => byKey.has(id));
+  const known = new Set(order);
+  for (const it of items.filter(x => !known.has(x.id)).sort((a, b) => key(b) - key(a))) {
+    let at = order.findIndex(id => key(byKey.get(id)) < key(it));
+    if (at < 0) at = order.length;
+    order.splice(at, 0, it.id);
+  }
+  for (let pass = 0, moved = true; moved && pass < order.length; pass++) {
+    moved = false;
+    for (let i = 1; i < order.length; i++) {
+      if (key(byKey.get(order[i])) - key(byKey.get(order[i - 1])) >= margin) { [order[i - 1], order[i]] = [order[i], order[i - 1]]; moved = true; }
+    }
+  }
+  return order;
+}
+
+/* ================================ the wave field ================================ */
+// Every signal is a source of waves. All waves travel at the same speed; their wavelengths keep
+// the real proportion between bands (12.5 cm at 2.4 GHz, 6 cm at 5 GHz, 5 cm at 6 GHz). A source
+// sits closer to you the stronger it arrives here, and its waves reach further and brighter.
+const FIELD = {
+  MAXN: 40, WAVES: 12, SPEED: 34,
+  LAMBDA: { 2: 56, 5: 27, 6: 23 },
+  SECTORS: { mine: [-150, -32], other: [-18, 34], lan: [44, 78], bt: [104, 204] },   // degrees clockwise from the right
+  ZONES: [[-60, 'Strong'], [-70, 'Good'], [-80, 'Weak']],
+  TITLES: { mine: 'Your network', other: 'Other routers', bt: 'Bluetooth' },
+};
+const stage = byId('field'), wavesCanvas = byId('waves'), marksCanvas = byId('marks');
+const hud = { title: byId('h-title'), count: byId('h-count'), split: byId('h-split'), total: byId('h-total'), board: byId('h-board'), rows: new Map() };
+hud.count.__val = 0;
+hud.total.__val = -100;
+const field = {
+  items: new Map(), order: [], seq: { mine: 0, other: 0, bt: 0, lan: 0 }, hover: null, time: 0, stale: false,
+  q: Math.min(1, devicePixelRatio || 1), frames: [], flashes: [], boxes: [], gl: null,
+  w: 0, h: 0, dpr: 1, cx: 0, cy: 0, rx: 0, ry: 0, shield: 0, shieldTarget: 0, link: null,
+  cursor: { x: 0, y: 0, rx: 0, ry: 0, r: 12, inside: false },
+};
+if (!still) stage.classList.add('live-cursor');
+
+const FRAG = `precision highp float;
+#define MAXN ${FIELD.MAXN}
+uniform vec2 uRes; uniform float uScale; uniform float uTime; uniform int uN;
+uniform vec4 uSrc[MAXN]; uniform vec4 uCol[MAXN]; uniform vec4 uExt[MAXN]; uniform vec3 uYou;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main() {
+  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uScale;
+  float dy = length(p - uYou.xy);
+  float rYou = 54.0 + 8.0 * uYou.z;
+  float pool = smoothstep(rYou * 0.95, rYou * 1.9, dy);   // your Mac sits in a calm, clear pool
+  vec3 col = vec3(0.0);
+  float sum = 0.0;
+  for (int i = 0; i < MAXN; i++) {
+    if (i >= uN) break;
+    vec4 s = uSrc[i]; vec4 c = uCol[i];
+    float d = length(p - s.xy);
+    float gain = uExt[i].y;
+    float env = s.w * gain * exp(-d / c.w) * smoothstep(3.0, 22.0, d) * pool;
+    float w = cos(s.z * (d - uTime * ${FIELD.SPEED.toFixed(1)}) + uExt[i].x);
+    col += c.rgb * pow(max(w, 0.0), 26.0) * env;
+    sum += w * env;
+    col += c.rgb * s.w * gain * 0.45 * exp(-d * d / 90.0);
+  }
+  col += vec3(1.0, 0.97, 0.92) * sum * sum * 0.01;
+  col += vec3(0.92, 0.9, 0.86) * (0.035 + 0.05 * uYou.z) * exp(-dy * dy / 7000.0);
+  vec2 q = gl_FragCoord.xy / uRes - 0.5;
+  col *= 1.0 - 0.75 * smoothstep(0.2, 0.75, length(q * vec2(1.25, 1.0)));
+  col = 1.0 - exp(-col * 0.95);
+  col += vec3(0.031, 0.035, 0.047);
+  col += (hash(gl_FragCoord.xy + fract(uTime * 7.0) * 113.0) - 0.5) * 0.012;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+function glInit(canvas) {
+  let gl = null;
+  try { gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'low-power' }); } catch (e) { gl = null; }
+  if (!gl) return null;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  try {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, shader(gl.VERTEX_SHADER, 'attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }'));
+    gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(prog, 'a');
+    gl.enableVertexAttribArray(a);
+    gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+    const u = n => gl.getUniformLocation(prog, n);
+    return { gl, u: { res: u('uRes'), scale: u('uScale'), time: u('uTime'), n: u('uN'), src: u('uSrc'), col: u('uCol'), ext: u('uExt'), you: u('uYou') },
+             src: new Float32Array(FIELD.MAXN * 4), col: new Float32Array(FIELD.MAXN * 4), ext: new Float32Array(FIELD.MAXN * 4) };
+  } catch (e) {
+    console.warn('Signal Scan: drawing waves without WebGL.', e);
+    return null;
+  }
+}
+wavesCanvas.addEventListener('webglcontextlost', e => { e.preventDefault(); field.gl = false; });
+wavesCanvas.addEventListener('webglcontextrestored', () => { field.gl = null; wake(fieldLoop); });
+
+function fieldSize() {
+  const w = stage.clientWidth, h = stage.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (w === field.w && h === field.h && dpr === field.dpr) return;
+  Object.assign(field, { w, h, dpr, cx: w / 2, cy: h * 0.54, rx: Math.min(w * 0.4, h * 0.68), ry: h * 0.38 });
+  marksCanvas.width = Math.round(w * dpr);
+  marksCanvas.height = Math.round(h * dpr);
+  hudBoxes();
+}
+function hudBoxes() {
+  const s = stage.getBoundingClientRect();
+  field.boxes = [...stage.querySelectorAll('.hud, .stage-actions')].filter(n => n.offsetParent).map(n => {
+    const r = n.getBoundingClientRect();
+    return [r.left - s.left - 10, r.top - s.top - 10, r.right - s.left + 10, r.bottom - s.top + 10];
+  });
+}
+// Strength 1 sits just outside your Mac's ring, strength 0 on the rim.
+const INNER = 0.27;
+const fieldF = s => INNER + (1 - s) * (1 - INNER);
+const fieldPlace = (angle, s) => {
+  const f = fieldF(s);
+  return [field.cx + Math.cos(angle) * f * field.rx, field.cy + Math.sin(angle) * f * field.ry];
+};
+const youRadius = () => 54 + field.shield * 8;
+
+function fieldUpdate(model) {
+  const heard = new Set();
+  for (const sig of (model && model.signals) || []) {
+    if (!sig || sig.id == null || !FIELD.SECTORS[sig.cat] || !Number.isFinite(sig.rssi)) continue;
+    heard.add(sig.id);
+    let it = field.items.get(sig.id);
+    if (it && it.cat !== sig.cat) {   // changed sides: re-enter in the right sector and colour
+      field.items.delete(sig.id);
+      if (field.hover === it) field.hover = null;
+      it = null;
+    }
+    if (!it) {
+      const [a, b] = FIELD.SECTORS[sig.cat], k = field.seq[sig.cat]++;
+      it = { id: sig.id, cat: sig.cat, angle: (a + (b - a) * (((k + 0.5) * 0.6180339887) % 1)) * Math.PI / 180,
+             phase: hash01(String(sig.id)) * Math.PI * 2, wob: hash01(sig.id + '/') * 20, fade: 0, hl: 1, smooth: sig.rssi, cycle: null };
+      field.items.set(sig.id, it);
+    }
+    Object.assign(it, { gone: false, name: String(sig.name || 'Unnamed'), detail: sig.detail || '', connected: !!sig.connected,
+                        updates: sig.updates, band: FIELD.LAMBDA[sig.band] ? sig.band : 2, rssi: Math.round(sig.rssi), s: strength(sig.rssi) });
+    it.smooth += (sig.rssi - it.smooth) * 0.35;
+  }
+  for (const it of field.items.values()) if (!heard.has(it.id)) it.gone = true;
+  field.stale = !!(model && model.stale);
+  const live = [...field.items.values()].filter(it => !it.gone);
+  field.order = stableOrder(field.order, live, it => it.smooth, 3);
+  hudUpdate(live);
+  hudBoxes();
+  wake(fieldLoop);
+}
+
+function hudUpdate(live) {
+  const n = cat => live.filter(it => it.cat === cat).length;
+  tweenTo(hud.count, live.length, v => String(Math.round(v)));
+  const parts = [[n('mine'), 'yours', 'mine'], [n('other'), n('other') === 1 ? 'other router' : 'other routers', 'other'], [n('bt'), 'Bluetooth', 'bt']];
+  if (n('lan')) parts.push([n('lan'), n('lan') === 1 ? 'device of yours' : 'devices of yours', 'lan']);
+  const sig = JSON.stringify(parts);
+  if (hud.split.__sig !== sig) {
+    hud.split.__sig = sig;
+    hud.split.replaceChildren(...parts.map(([k, label, cat]) =>
+      el('span', null, el('i', { class: 'glyph ' + (cat === 'bt' ? 'dot' : cat === 'lan' ? 'ring' : 'sq'), style: `color:${HEX[cat]}` }), `${k} ${label}`)));
+  }
+  const total = sumDbm(live.map(it => it.rssi));
+  tweenTo(hud.total, total == null ? NaN : Math.round(total), fmtDb);
+  field.shieldTarget = total == null ? 0 : strength(total);
+  setText(hud.title, field.stale ? 'Scanner stopped · last reading' : 'Signals reaching your seat');
+  const top = field.order.map(id => field.items.get(id)).filter(it => it && !it.gone).slice(0, 3);
+  const nodes = top.map((it, i) => {
+    let r = hud.rows.get(it.id);
+    if (!r) {
+      r = { rk: el('span', { class: 'rk' }), g: el('i'), nm: el('span', { class: 'nm' }), db: el('span', { class: 'db' }) };
+      r.node = el('li', null, r.rk, r.g, r.nm, r.db);
+      hud.rows.set(it.id, r);
+    }
+    setText(r.rk, String(i + 1).padStart(2, '0'));
+    r.g.className = 'glyph ' + (it.cat === 'bt' ? 'dot' : it.cat === 'lan' ? 'ring' : 'sq');
+    r.g.style.color = HEX[it.cat];
+    setText(r.nm, it.name);   // names come off the air: text only
+    setText(r.db, fmtDb(it.rssi));
+    return r.node;
+  });
+  const shown = new Set(nodes);
+  for (const [id, r] of hud.rows) if (!shown.has(r.node)) hud.rows.delete(id);
+  reorder(hud.board, nodes);
+  marksCanvas.setAttribute('aria-label', top[0]
+    ? `${field.stale ? 'Last reading before the scanner stopped' : 'Live picture'}: ${count(live.length, 'signal')} around you. Strongest: ${top[0].name} at ${dbm(top[0].rssi)}. Every value is also listed in the register further down.`
+    : 'Live picture of the signals around you. Nothing heard yet.');
+}
+
+function fieldLoop(t, dt) {
+  if (!isOn(stage)) return false;
+  fieldSize();
+  if (!field.w || !field.h) return false;
+  if (!field.stale && !still) field.time += dt;
+  const fx = Math.min(1, dt * 6);
+  for (const it of [...field.items.values()]) {
+    it.fade += ((it.gone ? 0 : 1) - it.fade) * Math.min(1, dt * (it.gone ? 2.2 : 1.4));
+    if (still) it.fade = it.gone ? 0 : 1;
+    if (it.gone && it.fade < 0.02) { field.items.delete(it.id); if (field.hover === it) field.hover = null; continue; }
+    const target = field.hover ? (it === field.hover ? 1.9 : 0.16) : 1;
+    const drift = still ? 0 : Math.sin(field.time * 0.3 + it.wob) * 0.014;
+    const [tx, ty] = fieldPlace(it.angle + drift, it.s);
+    if (still) { it.x = tx; it.y = ty; it.hl = target; continue; }
+    if (it.x == null) { [it.x, it.y] = fieldPlace(it.angle, -0.45); it.vx = 0; it.vy = 0; }
+    [it.x, it.vx] = springStep(it.x, it.vx, tx, 14, dt);
+    [it.y, it.vy] = springStep(it.y, it.vy, ty, 14, dt);
+    it.hl += (target - it.hl) * fx;
+  }
+  field.shield += (field.shieldTarget - field.shield) * Math.min(1, dt * 2);
+  if (still) field.shield = field.shieldTarget;
+  // A crest reaching you lights your shield, in step with the waves on screen.
+  if (!still && !field.stale) {
+    for (const it of field.items.values()) {
+      if (it.gone || it.x == null || it.s < 0.3) { it.cycle = null; continue; }
+      const lam = FIELD.LAMBDA[it.band], d = Math.hypot(it.x - field.cx, it.y - field.cy);
+      const cyc = Math.floor(((2 * Math.PI / lam) * (d - field.time * FIELD.SPEED) + it.phase) / (2 * Math.PI));
+      if (it.cycle != null && cyc !== it.cycle && field.flashes.length < 160) {
+        field.flashes.push({ a: Math.atan2(it.y - field.cy, it.x - field.cx), s: it.s * Math.min(1, it.hl), cat: it.cat, life: 1 });
+      }
+      it.cycle = cyc;
+    }
+  }
+  drawWaves();
+  drawMarks(dt);
+  adapt(dt);
+  return !still;
+}
+
+function drawWaves() {
+  if (field.gl == null) field.gl = glInit(wavesCanvas) || false;
+  const W = Math.max(1, Math.round(field.w * field.q)), H = Math.max(1, Math.round(field.h * field.q));
+  if (wavesCanvas.width !== W || wavesCanvas.height !== H) { wavesCanvas.width = W; wavesCanvas.height = H; }
+  // Only the signals that really reach you send visible waves: the strongest dozen, Bluetooth
+  // counting for a little less than a router. The rest stay quiet dots, listed in the register.
+  const weight = it => it.s * it.fade * (it.cat === 'bt' ? 0.7 : 1) + (it.connected ? 1 : 0);
+  const list = [...field.items.values()].filter(it => it.x != null && it.fade > 0.01 && (it.s >= 0.3 || it.connected))
+    .sort((a, b) => weight(b) - weight(a)).slice(0, FIELD.WAVES);
+  const R = field.gl;
+  if (!R) { drawWavesFallback(list); return; }
+  const { gl, u } = R;
+  gl.viewport(0, 0, W, H);
+  R.src.fill(0); R.col.fill(0); R.ext.fill(0);
+  list.forEach((it, i) => {
+    R.src.set([it.x, it.y, 2 * Math.PI / FIELD.LAMBDA[it.band], waveAmp(it)], i * 4);
+    const c = RGB[it.cat];
+    R.col.set([c[0], c[1], c[2], waveReach(it)], i * 4);
+    R.ext.set([it.phase, it.hl, 0, 0], i * 4);
+  });
+  gl.uniform2f(u.res, W, H);
+  gl.uniform1f(u.scale, field.q);
+  gl.uniform1f(u.time, field.time);
+  gl.uniform1i(u.n, list.length);
+  gl.uniform4fv(u.src, R.src);
+  gl.uniform4fv(u.col, R.col);
+  gl.uniform4fv(u.ext, R.ext);
+  gl.uniform3f(u.you, field.cx, field.cy, field.shield);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  wavesCanvas.classList.add('on');
+}
+const waveAmp = it => (0.04 + 0.72 * it.s * it.s) * it.fade * (it.cat === 'bt' ? 0.55 : 1);
+const waveReach = it => 30 + 240 * it.s;   // css px over which a source's waves fade by e
+// Without WebGL: the same crests, drawn as rings from the strongest sources.
+function drawWavesFallback(list) {
+  const ctx = wavesCanvas.getContext('2d');
+  if (!ctx) return;
+  ctx.setTransform(field.q, 0, 0, field.q, 0, 0);
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, field.w, field.h);
+  ctx.lineWidth = 1.2;
+  for (const it of list.slice(0, 16)) {
+    const lam = FIELD.LAMBDA[it.band], reach = waveReach(it), amp = waveAmp(it) * it.hl;
+    const off = (((field.time * FIELD.SPEED - it.phase / (2 * Math.PI) * lam) % lam) + lam) % lam;
+    ctx.strokeStyle = HEX[it.cat];
+    for (let r = off; r < reach * 2.5; r += lam) {
+      ctx.globalAlpha = Math.min(1, amp * Math.exp(-r / reach)) * 0.7;
+      ctx.beginPath(); ctx.arc(it.x, it.y, r, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  wavesCanvas.classList.add('on');
+}
+
+// Text over the waves gets a soft dark halo rather than an outline.
+function halo(ctx, text, x, y, fill) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(8, 9, 12, 0.95)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = fill;
+  ctx.fillText(text, x, y);
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+function drawMarks(dt) {
+  const ctx = marksCanvas.getContext('2d'), { w, h, dpr, cx, cy, rx, ry } = field;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  // Three faint strength rings, their values set quietly in the gap below your Mac.
+  ctx.font = `500 9.5px ${F_MONO}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const [lvl] of FIELD.ZONES) {
+    const f = fieldF(strength(lvl));
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(239,233,221,0.05)';
+    ctx.beginPath(); ctx.ellipse(cx, cy, f * rx, f * ry, 0, 0, Math.PI * 2); ctx.stroke();
+    halo(ctx, `${neg(lvl)} dBm`, cx, cy + f * ry, 'rgba(239,233,221,0.26)');
+  }
+  // The signals: routers are diamonds, Bluetooth devices dots. Faint ones are only dust.
+  const hov = field.hover;
+  const items = [...field.items.values()].filter(it => it.x != null).sort((a, b) => a.s - b.s);
+  for (const it of items) {
+    const faint = it.s < 0.35 && !it.connected && it !== hov;
+    const a = it.fade * (hov && it !== hov ? 0.3 : 1) * (faint ? 0.35 : 1), col = HEX[it.cat];
+    const size = faint ? 1.4 : 2.4 + 4 * it.s;
+    ctx.fillStyle = col;
+    if (!faint) {
+      ctx.globalAlpha = a * 0.12;
+      ctx.beginPath(); ctx.arc(it.x, it.y, size + 6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = a;
+    if (it.cat === 'bt' || faint) {
+      ctx.beginPath(); ctx.arc(it.x, it.y, it.cat === 'bt' ? size * 0.8 : size, 0, Math.PI * 2); ctx.fill();
+    } else if (it.cat === 'lan') {   // a device of yours, heard in listening mode: a ring
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(it.x, it.y, size, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(it.x, it.y, size * 0.32, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.save();
+      ctx.translate(it.x, it.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.strokeStyle = col; ctx.lineWidth = 1.3;
+      ctx.strokeRect(-size, -size, size * 2, size * 2);
+      ctx.fillRect(-size * 0.4, -size * 0.4, size * 0.8, size * 0.8);
+      ctx.restore();
+    }
+    if (it.connected) {   // the router your Mac is on: a ring that keeps turning
+      const rot = still ? 0 : field.time * 0.9;
+      ctx.strokeStyle = PAPER; ctx.lineWidth = 1.1; ctx.globalAlpha = a * 0.8;
+      ctx.beginPath(); ctx.arc(it.x, it.y, size + 8, rot, rot + Math.PI * 1.3); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // Names only for the few that hit hardest, and for whatever the pointer is on.
+  const quota = w > 1100 ? 4 : w > 760 ? 3 : 2;
+  const named = field.order.map(id => field.items.get(id)).filter(it => it && !it.gone && it.x != null && it.s >= 0.4).slice(0, quota);
+  if (hov && !named.includes(hov)) named.unshift(hov);
+  const placed = field.boxes.slice();
+  const R0 = youRadius();
+  placed.push([cx - R0 - 6, cy - R0 - 6, cx + R0 + 6, cy + R0 + 44]);   // keep your Mac clear
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  for (const it of named) {
+    const right = it.x >= cx, size = 2.4 + 4 * it.s, name = short(it.name, 24), val = fmtDb(it.rssi);
+    ctx.font = `500 11.5px ${F_SANS}`;
+    const nw = ctx.measureText(name).width;
+    ctx.font = `500 10.5px ${F_MONO}`;
+    const tw = nw + 8 + ctx.measureText(val).width, gap = size + 14;
+    for (const dy of [0, -16, 16, -32, 32]) {
+      const lx = right ? it.x + gap : it.x - gap - tw, ly = it.y + dy, box = [lx - 4, ly - 9, lx + tw + 4, ly + 9];
+      if (lx < 6 || lx + tw > w - 6 || ly < 10 || ly > h - 10) continue;
+      if (it !== hov && placed.some(p => box[0] < p[2] && box[2] > p[0] && box[1] < p[3] && box[3] > p[1])) continue;
+      placed.push(box);
+      const a = it.fade * (hov && it !== hov ? 0.4 : 1);
+      if (dy) {
+        ctx.globalAlpha = a * 0.35; ctx.strokeStyle = PAPER; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(it.x + (right ? size + 4 : -size - 4), it.y); ctx.lineTo(right ? lx - 5 : lx + tw + 5, ly); ctx.stroke();
+      }
+      ctx.globalAlpha = a;
+      ctx.font = `500 11.5px ${F_SANS}`;
+      halo(ctx, name, lx, ly, 'rgba(239,233,221,0.9)');
+      ctx.font = `500 10.5px ${F_MONO}`;
+      halo(ctx, val, lx + nw + 8, ly, 'rgba(239,233,221,0.5)');
+      break;
+    }
+  }
+  ctx.globalAlpha = 1;
+  drawYou(ctx, dt, R0);
+  // A cursor that trails the pointer and locks onto a signal.
+  const c = field.cursor;
+  if (c.inside && !still) {
+    const tx = hov ? hov.x : c.x, ty = hov ? hov.y : c.y, tr = hov ? 15 + 4 * hov.s : 12, k = Math.min(1, dt * 16);
+    c.rx += (tx - c.rx) * k; c.ry += (ty - c.ry) * k; c.r += (tr - c.r) * Math.min(1, dt * 12);
+    ctx.globalAlpha = 0.85; ctx.lineWidth = 1.1; ctx.strokeStyle = hov ? HEX[hov.cat] : 'rgba(239,233,221,0.6)';
+    ctx.beginPath(); ctx.arc(c.rx, c.ry, c.r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.fillStyle = PAPER;
+    ctx.beginPath(); ctx.arc(c.x, c.y, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// Your Mac, the centre of everything: a laptop in a pool of light, its screen showing how well
+// it hears your router, inside a ring that lights up wherever a wave arrives.
+function drawYou(ctx, dt, R0) {
+  const { cx, cy } = field;
+  const glow = ctx.createRadialGradient(cx, cy, R0 * 0.2, cx, cy, R0 * 1.6);
+  glow.addColorStop(0, 'rgba(239,233,221,0.09)');
+  glow.addColorStop(0.6, 'rgba(239,233,221,0.035)');
+  glow.addColorStop(1, 'rgba(239,233,221,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, R0 * 1.6, 0, Math.PI * 2); ctx.fill();
+  // Crests landing on the ring, in the colour of the signal that sent them.
+  let keep = 0;
+  for (const fl of field.flashes) {
+    fl.life -= dt * 2.2;
+    if (fl.life <= 0) continue;
+    ctx.globalAlpha = fl.life * (0.2 + 0.7 * fl.s);
+    ctx.strokeStyle = HEX[fl.cat]; ctx.lineWidth = 1.5 + 3 * fl.s;
+    const half = 0.08 + 0.2 * fl.s;
+    ctx.beginPath(); ctx.arc(cx, cy, R0, fl.a - half, fl.a + half); ctx.stroke();
+    field.flashes[keep++] = fl;
+  }
+  field.flashes.length = keep;
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(239,233,221,0.22)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, R0, 0, Math.PI * 2); ctx.stroke();
+  const breathe = still ? 0 : (Math.sin(field.time * 1.6) + 1) / 2;
+  ctx.strokeStyle = `rgba(239,233,221,${0.05 + 0.06 * breathe})`;
+  ctx.beginPath(); ctx.arc(cx, cy, R0 + 7 + 3 * breathe, 0, Math.PI * 2); ctx.stroke();
+  // The laptop.
+  const sw = 60, sh = 39, top = cy - 27, baseY = top + sh;
+  ctx.lineWidth = 1.6; ctx.strokeStyle = PAPER;
+  ctx.fillStyle = 'rgba(14, 16, 21, 0.92)';
+  ctx.beginPath(); ctx.roundRect(cx - sw / 2, top, sw, sh, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = PAPER;
+  ctx.beginPath();
+  ctx.moveTo(cx - sw / 2 - 1, baseY + 1); ctx.lineTo(cx + sw / 2 + 1, baseY + 1);
+  ctx.lineTo(cx + sw / 2 + 9, baseY + 8); ctx.lineTo(cx - sw / 2 - 9, baseY + 8); ctx.closePath();
+  ctx.fill();
+  // On its screen, a Wi-Fi symbol lit by how strongly it hears your router.
+  const lit = field.link == null ? 0 : field.link >= -60 ? 3 : field.link >= -70 ? 2 : field.link >= -80 ? 1 : 0;
+  const ox = cx, oy = top + sh - 10;
+  ctx.fillStyle = field.link == null ? 'rgba(239,233,221,0.3)' : HEX.mine;
+  ctx.beginPath(); ctx.arc(ox, oy, 2.2, 0, Math.PI * 2); ctx.fill();
+  [7, 13, 19].forEach((r, k) => {
+    ctx.strokeStyle = k < lit ? HEX.mine : 'rgba(239,233,221,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(ox, oy, r, -Math.PI * 0.78, -Math.PI * 0.22); ctx.stroke();
+  });
+  // Its name and its own connection.
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `600 10.5px ${F_MONO}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  halo(ctx, 'YOUR MAC', cx, cy + R0 + 17, PAPER);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.font = `500 10.5px ${F_MONO}`;
+  halo(ctx, field.link == null ? 'not on Wi-Fi' : `${neg(field.link)} dBm from your router`, cx, cy + R0 + 33, 'rgba(239,233,221,0.55)');
+}
+
+// Keep the motion smooth: draw the waves at a lower resolution when frames run long.
+function adapt(dt) {
+  const f = field.frames;
+  f.push(dt);
+  if (f.length < 45) return;
+  const avg = f.reduce((a, b) => a + b, 0) / f.length;
+  f.length = 0;
+  const top = Math.min(1.5, field.dpr || 1);
+  if (avg > 0.024 && field.q > 0.5) field.q = Math.max(0.5, field.q * 0.82);
+  else if (avg < 0.0175 && field.q < top) field.q = Math.min(top, field.q * 1.08);
+}
+
+stage.addEventListener('pointermove', e => {
+  const r = stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, c = field.cursor;
+  if (!c.inside) { c.rx = x; c.ry = y; }
+  c.x = x; c.y = y; c.inside = true;
+  let best = null, reach = 28;
+  for (const it of field.items.values()) {
+    if (it.gone || it.x == null) continue;
+    const d = Math.hypot(it.x - x, it.y - y);
+    if (d < reach) { reach = d; best = it; }
+  }
+  field.hover = best;
+  wake(fieldLoop);
+});
+stage.addEventListener('pointerleave', () => { field.cursor.inside = false; field.hover = null; wake(fieldLoop); });
+tips.set('field', () => {
+  const it = field.hover;
+  if (!it) return null;
+  const kind = it.cat === 'bt' ? 'Bluetooth device'
+             : it.cat === 'lan' ? 'A device on your network: a snapshot from when you last listened, not a live reading'
+             : it.cat === 'mine' ? (it.connected ? 'A router of your network, the one this Mac is on' : 'A router of your network') : 'Someone else’s router';
+  const band = it.band === 2 ? '2.4 GHz waves, about 12 cm long' : it.band === 5 ? '5 GHz waves, about 6 cm long' : '6 GHz waves, about 5 cm long';
+  return tipBody(`${dbm(it.rssi)} · ${word(it.rssi)}`, HEX[it.cat], it.name, [kind, it.detail, band, it.updates ? `Updates ${it.updates}` : null]);
+});
+byId('fs').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
+});
+document.addEventListener('fullscreenchange', () => {
+  setText(byId('fs'), document.fullscreenElement === stage ? 'Exit full screen' : 'Full screen');
+  (document.fullscreenElement || document.body).append(tipEl);   // only what is inside the full-screen element is painted
+  field.w = 0;
+  wake(fieldLoop);
+});
+track(stage, () => wake(fieldLoop));
+
+/* ================================ your seat ================================ */
+function fillVerdict(id, v) {
+  const node = byId(id), sig = JSON.stringify(v, (k, x) => (typeof x === 'function' ? undefined : x));
+  if (node.__sig === sig) return;
+  node.__sig = sig;
+  const state = node.querySelector('.state'), fig = node.querySelector('.fig'), text = node.querySelector('.text'), act = node.querySelector('.act');
+  state.replaceChildren(v.state, v.em ? el('em', { text: v.em }) : '');
+  setText(fig, v.fig || '');
+  fig.hidden = !v.fig;
+  setText(text, v.text || '');
+  if (act) {
+    act.replaceChildren(...(v.act ? [v.act.href ? el('a', { class: 'pill', href: v.act.href, text: v.act.text })
+      : el('button', { class: 'pill', type: 'button', disabled: !!v.act.disabled, text: v.act.text, onclick: v.act.run })] : []));
+  }
+  if (node.__state !== v.state && node.__state != null && !still) {
+    state.animate([{ opacity: 0, transform: 'translateY(10px)', filter: 'blur(4px)' }, { opacity: 1, transform: 'none', filter: 'none' }], { duration: 800, easing: EASE });
+  }
+  node.__state = v.state;
+}
+
+function channelVerdict(m) {
+  if (!m.cur) return { state: 'Not connected.', text: 'Join a Wi-Fi network to see who shares its channel.' };
+  const fig = `Channel ${m.cur.channel} · ${BAND[m.cur.band]} · ${m.cur.width} MHz wide`;
+  if (!m.sharers.length) return { state: 'Nobody else is on it.', fig, text: 'No other router overlaps your channel from here.' };
+  const top = m.sharers[0], gap = m.cur.rssi - top.rssi;
+  const name = `“${short(top.label, 26)}”`;
+  const rel = `${dbm(top.rssi)}, ${Math.abs(gap)} dB ${gap >= 0 ? 'weaker' : 'stronger'} than the router you are on`;
+  // Sharers are sorted strongest first: if none is audible, the one named here is itself faint.
+  const quiet = !m.audible.length;
+  // A new channel number only helps if it lands in a block neither of your routers covers.
+  let cure = 'Moving one of the two to a channel the other does not cover removes that.';
+  if (top.mine && m.cur.band === 5) {
+    const own = m.nets.filter(n => n.mine && n.band === 5);
+    const free = OPTIONS[5].filter(o => !own.some(n => overlap(n, o) > 0));
+    const span = list => list.map(o => o.label.replace('Channels ', '')).join(', ');
+    const plain = free.filter(o => !o.radar), radar = free.filter(o => o.radar);
+    const where = [plain.length ? `channels ${span(plain)}` : '',
+                   radar.length ? `the radar-shared ${plain.length ? '' : 'channels '}${span(radar)}` : ''].filter(Boolean).join(', or ');
+    if (where) cure = `Moving one of the two into a block neither covers removes that: ${where}.`;
+    // Only true when both fill whole 80 MHz blocks; narrower routers can dodge each other inside one.
+    if (Math.min(m.cur.width, top.width) >= 80) {
+      const used = OPTIONS[5].filter(o => overlap(m.cur, o) > 0 || overlap(top, o) > 0);
+      const chan = mhz => (mhz - 5000) / 5;
+      cure += ` Any other channel from ${chan(used[0].lo + 10)} to ${chan(used[used.length - 1].hi - 10)} changes nothing: `
+            + (Math.max(m.cur.width, top.width) >= 160 ? 'one of them is 160 MHz wide and covers all of those.' : 'both fill that whole block.');
+    }
+  }
+  let text = top.mine ? `Your own ${name} overlaps it at ${rel}.${quiet ? '' : ' ' + cure}` : `The strongest is ${name} at ${rel}.`;
+  const ownRest = m.audible.filter(n => n.mine && n !== top).length;
+  if (ownRest) text += ` ${ownRest} more of your own ${ownRest === 1 ? 'router overlaps' : 'routers overlap'} too.`;
+  if (m.offCentre.length) text += ` ${m.offCentre.length} only partly overlap${m.offCentre.length === 1 ? 's' : ''} your channel, which causes collisions rather than orderly turn-taking.`;
+  const faint = m.sharers.length - m.audible.length;
+  if (quiet) text += faint === 1 ? ' It is too faint to matter.' : ` It and ${faint - 1} more are too faint to matter.`;
+  else if (faint) text += ` ${faint} more ${faint === 1 ? 'is' : 'are'} too faint to matter.`;
+  const state = quiet ? 'Clear.'
+              : m.offCentre.length || m.audible.length >= 3 ? `Crowded: ${count(m.audible.length, 'router')} overlap it.`
+              : `Shared with ${count(m.audible.length, 'other router')}.`;
+  return { state, fig, text };
+}
+
+function seatUpdate(m) {
+  const i = m.iface;
+  if (i.associated) {
+    fillVerdict('v-link', {
+      state: `${word(i.rssi)}.`, em: dbm(i.rssi),
+      fig: [`Channel ${i.channel}`, BAND[i.band], `${i.width} MHz`, GEN[i.phy], i.txRate ? `${Math.round(i.txRate)} Mbps` : null].filter(Boolean).join(' · '),
+      text: i.noise != null ? `${i.rssi - i.noise} dB above the background noise. The more headroom, the faster and steadier the connection.` : 'Read once a second, right where the Mac is.',
+    });
+  } else {
+    fillVerdict('v-link', { state: 'Not connected.', text: 'This Mac is not joined to a Wi-Fi network.' });
+  }
+  fillVerdict('v-chan', channelVerdict(m));
+  if (i.associated && i.noise != null) {
+    const nz = i.noise, q = nz <= -90 ? 'Quiet.' : nz <= -85 ? 'Slightly raised.' : 'Noisy.';
+    fillVerdict('v-noise', { state: q, em: dbm(nz), fig: `Measured on channel ${i.channel}`,
+      text: i.band === 2 ? 'It can rise while a microwave oven or other non-Wi-Fi gear is running.'
+                         : `It only covers your ${BAND[i.band]} channel. Microwave ovens, Zigbee and Thread work at 2.4 GHz and do not show here.` });
+  } else {
+    fillVerdict('v-noise', { state: 'No reading.', text: 'The background noise is measured on the channel this Mac is connected to.' });
+  }
+  const lan = m.st.lan || {};
+  const named = m.lan.filter(d => (d.name || d.host) && !d.self).length;
+  const byMaker = m.lan.filter(d => !(d.name || d.host) && !d.self && tidyMaker(d.vendor)).length;
+  if (lan.blocked) fillVerdict('v-lan', { state: 'Waiting for permission.', text: 'macOS has not let Signal Scan look at the local network yet. Choose Allow on its prompt, or switch it on under System Settings › Privacy & Security › Local Network.' });
+  else if (lan.note) fillVerdict('v-lan', { state: 'Not available.', text: lan.note });
+  else if (lan.trusted === false) {
+    fillVerdict('v-lan', { state: 'Not searched here.',
+      text: 'Signal Scan only searches networks you mark as your own: searching sends a tiny packet to every address, fine at home, not on an office or public network.',
+      act: { text: ui.asking ? 'Starting…' : 'This is my own network', disabled: ui.asking, run: () => networkCommand('trust') } });
+  } else {
+    fillVerdict('v-lan', { state: m.lan.length ? `${count(m.lan.length, 'device')}.` : 'Looking…',
+      fig: m.lan.length ? `${named} give a name · ${byMaker} known by their maker` : '',
+      text: 'Joined to your network in the last 20 minutes or so: the TV, cameras, phones and anything else on your Wi-Fi.',
+      act: m.lan.length ? { text: 'Open the register', href: '#register' } : null });
+  }
+  ladderFeed(m);
+}
+
+// A vertical scale of signal strength: your router, the background noise beneath it, and anything
+// sharing your channel, each gliding to its reading.
+const ladder = { box: byId('ladder-box'), canvas: byId('ladder'), marks: new Map(), head: null };
+function ladderFeed(m) {
+  const i = m.iface, want = new Map();
+  if (i.associated && i.noise != null) want.set('noise', { label: 'Background noise', v: i.noise, col: 'rgba(239,233,221,0.55)', w: 1, dash: true });
+  if (i.associated) want.set('link', { label: 'Your router', v: i.rssi, col: HEX.mine, w: 2.5 });
+  m.audible.slice(0, 3).forEach(n => want.set('sh:' + radioKey(n), { label: short(n.label, 22), v: n.rssi, col: n.mine ? HEX.mine : HEX.other, w: 1.2 }));
+  for (const [k, spec] of want) {
+    const mk = ladder.marks.get(k) || { y: null, vy: 0, fade: 0 };
+    Object.assign(mk, spec, { gone: false });
+    ladder.marks.set(k, mk);
+  }
+  for (const [k, mk] of ladder.marks) if (!want.has(k)) mk.gone = true;
+  ladder.head = i.associated && i.noise != null ? i.rssi - i.noise : null;
+  wake(ladderLoop);
+}
+function ladderLoop(t, dt) {
+  const box = ladder.box, c = ladder.canvas;
+  if (!isOn(box)) return false;
+  const w = box.clientWidth, h = box.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return false;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const top = 12, bot = h - 12, ax = 58;
+  const Y = v => top + (BAR_TOP - clamp(v, FLOOR, BAR_TOP)) / (BAR_TOP - FLOOR) * (bot - top);
+  [[-30, -60, 'Strong'], [-60, -70, 'Good'], [-70, -80, 'Weak'], [-80, -100, 'Faint']].forEach(([a, b, name], k) => {
+    ctx.fillStyle = k % 2 ? 'rgba(239,233,221,0.02)' : 'rgba(239,233,221,0.04)';
+    ctx.fillRect(ax, Y(a), w - ax, Y(b) - Y(a));
+    ctx.save();
+    ctx.translate(10, (Y(a) + Y(b)) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.font = `500 9.5px ${F_MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(239,233,221,0.38)';
+    ctx.fillText(name.toUpperCase(), 0, 0);
+    ctx.restore();
+  });
+  ctx.strokeStyle = 'rgba(239,233,221,0.22)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax + 0.5, top); ctx.lineTo(ax + 0.5, bot); ctx.stroke();
+  ctx.font = `500 10px ${F_MONO}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(239,233,221,0.4)';
+  for (let v = -30; v >= -100; v -= 10) {
+    const y = Y(v);
+    ctx.beginPath(); ctx.moveTo(ax - 4, y + 0.5); ctx.lineTo(ax, y + 0.5); ctx.stroke();
+    ctx.fillText(neg(v), ax - 8, y);
+  }
+  let busy = false;
+  const live = [];
+  for (const [k, mk] of ladder.marks) {
+    const ty = Y(mk.v);
+    if (mk.y == null) mk.y = still ? ty : Y(FLOOR);
+    if (still) { mk.y = ty; mk.fade = mk.gone ? 0 : 1; mk.vy = 0; }
+    else {
+      [mk.y, mk.vy] = springStep(mk.y, mk.vy, ty, 26, dt);
+      mk.fade += ((mk.gone ? 0 : 1) - mk.fade) * Math.min(1, dt * 3);
+    }
+    if (Math.abs(ty - mk.y) > 0.2 || Math.abs(mk.vy) > 0.2 || (mk.gone ? mk.fade > 0.01 : mk.fade < 0.99)) busy = true;
+    if (mk.gone && mk.fade < 0.01) { ladder.marks.delete(k); continue; }
+    live.push([k, mk]);
+  }
+  // Headroom: the gap between your router and the noise floor.
+  const L = ladder.marks.get('link'), N = ladder.marks.get('noise');
+  if (L && N && !L.gone && !N.gone && ladder.head != null && N.y - L.y > 50) {
+    const x = ax + 24, y1 = L.y + 6, y2 = N.y - 6, a = Math.min(L.fade, N.fade);
+    ctx.globalAlpha = a; ctx.strokeStyle = hexA(HEX.mine, 0.55); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 4, y1); ctx.lineTo(x, y1); ctx.lineTo(x, y2); ctx.lineTo(x - 4, y2); ctx.stroke();
+    ctx.save();
+    ctx.translate(x + 12, (y1 + y2) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.font = `500 10.5px ${F_MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(239,233,221,0.75)';
+    ctx.fillText(`${ladder.head} dB OF HEADROOM`, 0, 0);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+  // Lines, then labels kept at least 16 px apart.
+  live.sort((a, b) => a[1].y - b[1].y);
+  let lastLabel = -Infinity;
+  for (const [k, mk] of live) {
+    ctx.globalAlpha = mk.fade;
+    ctx.strokeStyle = mk.col; ctx.lineWidth = mk.w;
+    if (mk.dash) ctx.setLineDash([2, 4]);
+    if (k === 'link') { ctx.shadowColor = mk.col; ctx.shadowBlur = 14; }
+    ctx.beginPath(); ctx.moveTo(ax, mk.y); ctx.lineTo(w, mk.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.shadowBlur = 0;
+    const ly = Math.max(lastLabel + 16, mk.y - 7);
+    lastLabel = ly;
+    ctx.textBaseline = 'bottom';
+    ctx.font = `600 12px ${F_SANS}`; ctx.textAlign = 'left'; ctx.fillStyle = k === 'noise' ? 'rgba(239,233,221,0.6)' : PAPER;
+    ctx.fillText(mk.label, ax + 44, ly);
+    ctx.font = `500 11px ${F_MONO}`; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(239,233,221,0.6)';
+    ctx.fillText(`${neg(Math.round(mk.v))} dBm`, w, ly);
+  }
+  ctx.globalAlpha = 1;
+  return busy && !still;
+}
+track(ladder.box, () => wake(ladderLoop));
+
+/* ================================ the spectrum ================================ */
+function channelTicks(band, domain) {
+  const seq = (a, b, step) => { const out = []; for (let c = a; c <= b; c += step) out.push(c); return out; };
+  const chans = band === 2 ? seq(1, 13, 1)
+              : band === 5 ? [...seq(36, 64, 4), ...seq(100, 144, 4), ...seq(149, domain[1] > 5850 ? 177 : 165, 4)]
+              : seq(1, 233, 16);
+  return chans.map(ch => ({ ch, f: centre(band, ch) }));
+}
+const spectra = new Map();
+function spectrumUpdate(m) {
+  const bands = [2, 5].concat(m.nets.some(n => n.band === 6) ? [6] : []);
+  for (const b of bands) if (!spectra.has(b)) spectra.set(b, makeBand(b));
+  for (const b of [...spectra.keys()]) if (!bands.includes(b)) spectra.delete(b);
+  reorder(byId('bands'), bands.map(b => spectra.get(b).node));
+  for (const b of bands) feedBand(spectra.get(b), m);
+}
+function makeBand(band) {
+  const canvas = el('canvas', { 'data-tip': 'sp' + band, role: 'img', 'aria-label': `${BAND[band]} spectrum. The same readings are in the register below.` });
+  const facts = el('p', { class: 'facts' });
+  const node = el('article', { class: 'band rv' }, el('div', { class: 'band-meta' }, el('h3', { text: BAND[band] }), facts), el('div', { class: 'band-plot' }, canvas));
+  const sp = { band, node, canvas, facts, hums: new Map(), sparks: [], ble: [], noise: null, hover: null, top: 0, acc: 0, px: -1, py: -1 };
+  sp.loop = (t, dt) => bandLoop(sp, t, dt);
+  canvas.addEventListener('pointermove', e => {
+    const r = canvas.getBoundingClientRect();
+    sp.px = e.clientX - r.left; sp.py = e.clientY - r.top;
+    const hit = [...sp.hums.values()].filter(hm => hm.box && !hm.gone && sp.px >= hm.box[0] && sp.px <= hm.box[2] && sp.py >= hm.box[1] - 6 && sp.py <= hm.box[3])
+      .sort((a, b) => (a.box[2] - a.box[0]) - (b.box[2] - b.box[0]))[0];
+    const next = hit ? hit.net : null;
+    if (next !== sp.hover) { sp.hover = next; wake(sp.loop); }
+  });
+  canvas.addEventListener('pointerleave', () => { sp.hover = null; wake(sp.loop); });
+  tips.set('sp' + band, () => {
+    const n = sp.hover;
+    if (!n) return null;
+    return tipBody(dbm(n.rssi), n.mine ? HEX.mine : HEX.other, n.label, [
+      n.mine ? (n.current ? 'The router this Mac is connected to' : 'One of yours') : 'Not yours',
+      `Channel ${n.channel}, ${n.width} MHz wide (${n.lo} to ${n.hi} MHz)`,
+      [n.security, GEN[n.phy]].filter(Boolean).join(' · ')]);
+  });
+  track(canvas, () => wake(sp.loop));
+  revealIn(node);
+  return sp;
+}
+function feedBand(sp, m) {
+  const nets = m.nets.filter(n => n.band === sp.band), alive = new Set();
+  for (const n of nets) {
+    const key = radioKey(n);
+    alive.add(key);
+    let hm = sp.hums.get(key);
+    if (!hm) { hm = { cur: FLOOR, v: 0, fade: 0 }; sp.hums.set(key, hm); }
+    hm.net = n; hm.gone = false;
+  }
+  for (const [k, hm] of sp.hums) if (!alive.has(k)) hm.gone = true;
+  if (sp.hover && !nets.includes(sp.hover)) sp.hover = nets.find(n => radioKey(n) === radioKey(sp.hover)) || null;
+  sp.ble = sp.band === 2 ? m.ble.map(d => d.rssi).filter(Number.isFinite) : [];
+  sp.noise = m.iface.associated && m.iface.band === sp.band ? m.iface.noise : null;
+  sp.top = nets.reduce((a, n) => Math.max(a, n.hi), 0);
+  const heard = nets.filter(n => !n.synthetic);
+  const facts = [WAVES[sp.band], count(heard.length, 'router')];
+  if (nets.length) facts.push(`loudest ${dbm(Math.max(...nets.map(n => n.rssi)))}`);
+  if (sp.band === 2 && m.ble.length) facts.push(`${count(m.ble.length, 'Bluetooth device')}, in short bursts`);
+  setText(sp.facts, facts.join('\n'));
+  wake(sp.loop);
+}
+function bandLoop(sp, t, dt) {
+  const c = sp.canvas, box = c.parentNode;
+  if (!isOn(c)) return false;
+  const w = box.clientWidth, h = box.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return false;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const L = 40, R = 8, T = 16, B = 30;
+  const dom = sp.band === 2 ? [2400, 2484] : sp.band === 5 ? [5160, sp.top > 5845 ? 5905 : 5845] : [5945, 7125];
+  const X = f => L + (clamp(f, dom[0], dom[1]) - dom[0]) / (dom[1] - dom[0]) * (w - L - R);
+  const Y = v => T + (PLOT_TOP - clamp(v, FLOOR, PLOT_TOP)) / (PLOT_TOP - FLOOR) * (h - T - B);
+  const base = Y(FLOOR);
+  let busy = false;
+  for (const [k, hm] of sp.hums) {
+    const target = hm.gone ? FLOOR : hm.net.rssi;
+    if (still) { hm.cur = target; hm.fade = hm.gone ? 0 : 1; hm.v = 0; }
+    else {
+      [hm.cur, hm.v] = springStep(hm.cur, hm.v, target, 40, dt);
+      hm.fade += ((hm.gone ? 0 : 1) - hm.fade) * Math.min(1, dt * 3);
+    }
+    if (Math.abs(target - hm.cur) > 0.05 || Math.abs(hm.v) > 0.05 || (hm.gone ? hm.fade > 0.01 : hm.fade < 0.99)) busy = true;
+    if (hm.gone && hm.fade < 0.01) sp.hums.delete(k);
+  }
+  // Grid and axes.
+  ctx.font = `500 10px ${F_MONO}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'right'; ctx.lineWidth = 1;
+  for (const v of [-30, -50, -70, -90]) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = 'rgba(239,233,221,0.06)';
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(239,233,221,0.38)'; ctx.fillText(neg(v), L - 8, y);
+  }
+  ctx.strokeStyle = 'rgba(239,233,221,0.2)';
+  ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - R, base + 0.5); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(239,233,221,0.42)';
+  let lastX = -1e9;
+  for (const tk of channelTicks(sp.band, dom)) {
+    if (tk.f < dom[0] || tk.f > dom[1]) continue;
+    const x = Math.round(X(tk.f)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, base + 4); ctx.stroke();
+    if (x - lastX >= 22) { ctx.fillText(String(tk.ch), x, base + 9); lastX = x; }
+  }
+  if (sp.noise != null) {
+    const y = Math.round(Y(sp.noise)) + 0.5;
+    ctx.strokeStyle = 'rgba(239,233,221,0.3)'; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = 'rgba(239,233,221,0.5)';
+    ctx.fillText(`noise ${neg(sp.noise)}`, w - R, y - 4);
+  }
+  // Bluetooth: short bursts that can land anywhere from 2402 to 2480 MHz, each dot one burst
+  // at the strength of one of the devices heard.
+  if (sp.band === 2 && sp.ble.length) {
+    const loud = Math.max(...sp.ble), xa = X(2402), xb = X(2480), yl = Math.round(Y(loud)) + 0.5;
+    ctx.strokeStyle = hexA(HEX.bt, 0.4); ctx.setLineDash([1, 3]);
+    ctx.beginPath(); ctx.moveTo(xa, yl); ctx.lineTo(xb, yl); ctx.stroke(); ctx.setLineDash([]);
+    if (!still) {
+      sp.acc += Math.min(70, sp.ble.length * 1.6) * dt;
+      while (sp.acc >= 1 && sp.sparks.length < 260) { sp.acc -= 1; sp.sparks.push({ f: 2402 + Math.random() * 78, v: sp.ble[(Math.random() * sp.ble.length) | 0], life: 1 }); }
+      let keep = 0;
+      ctx.fillStyle = HEX.bt;
+      for (const s of sp.sparks) {
+        s.life -= dt * 1.8;
+        if (s.life <= 0) continue;
+        ctx.globalAlpha = s.life * 0.85;
+        ctx.fillRect(X(s.f) - 0.75, Y(s.v) - 3 * s.life, 1.5, 6 * s.life);
+        sp.sparks[keep++] = s;
+      }
+      sp.sparks.length = keep;
+      ctx.globalAlpha = 1;
+      busy = true;
+    }
+    ctx.font = `500 10px ${F_MONO}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = 'rgba(239,233,221,0.55)';
+    ctx.fillText(`Bluetooth · loudest ${neg(loud)}`, xb, yl - 5);
+  }
+  // Routers: the biggest drawn first so smaller ones stay on top.
+  const list = [...sp.hums.values()].filter(hm => hm.net);
+  list.sort((a, b) => (b.net.hi - b.net.lo) * (b.cur - FLOOR) - (a.net.hi - a.net.lo) * (a.cur - FLOOR));
+  for (const hm of list) {
+    const n = hm.net, x0 = X(n.lo), x1 = X(n.hi), yt = Y(hm.cur), col = n.mine ? HEX.mine : HEX.other;
+    const s = Math.min(9, (x1 - x0) * 0.18), dim = sp.hover && sp.hover !== n ? 0.35 : 1;
+    const path = new Path2D();
+    path.moveTo(x0, base);
+    path.bezierCurveTo(x0 + s * 0.6, base, x0 + s * 0.4, yt, x0 + s, yt);
+    path.lineTo(x1 - s, yt);
+    path.bezierCurveTo(x1 - s * 0.4, yt, x1 - s * 0.6, base, x1, base);
+    const g = ctx.createLinearGradient(0, yt, 0, base);
+    g.addColorStop(0, hexA(col, 0.3 * hm.fade * dim));
+    g.addColorStop(1, hexA(col, 0));
+    ctx.fillStyle = g;
+    ctx.fill(path);
+    ctx.save();
+    ctx.globalAlpha = hm.fade * dim;
+    ctx.shadowColor = col; ctx.shadowBlur = n.current || sp.hover === n ? 16 : 7;
+    ctx.strokeStyle = col; ctx.lineWidth = n.current ? 2 : 1.4;
+    ctx.stroke(path);
+    ctx.restore();
+    hm.box = [x0, yt, x1, base];
+  }
+  // Names for the loudest few, yours first.
+  const placed = [];
+  const lab = list.filter(hm => !hm.gone).sort((a, b) => (b.net.mine - a.net.mine) || (b.net.rssi - a.net.rssi));
+  let named = 0;
+  ctx.font = `600 11px ${F_SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  for (const hm of lab) {
+    if (named >= 7) break;
+    const n = hm.net, text = short(n.label, 22) + (n.current ? '  · you are on this' : ''), tw = ctx.measureText(text).width + 8;
+    const x0 = X(n.lo), x1 = X(n.hi), xm = clamp((x0 + x1) / 2, L + tw / 2, w - R - tw / 2), yt = Y(hm.cur);
+    const y = [yt - 10, yt - 25, yt + 14].find(s => s - 8 > 0 && s + 8 < base &&
+      !placed.some(p => xm - tw / 2 < p[2] && xm + tw / 2 > p[0] && s - 8 < p[3] && s + 8 > p[1]));
+    if (y == null) continue;
+    placed.push([xm - tw / 2, y - 8, xm + tw / 2, y + 8]);
+    named += 1;
+    ctx.globalAlpha = hm.fade * (sp.hover && sp.hover !== n ? 0.4 : 1);
+    halo(ctx, text, xm, y, n.mine ? PAPER : 'rgba(239,233,221,0.75)');
+  }
+  ctx.globalAlpha = 1;
+  if (!list.length && !(sp.band === 2 && sp.ble.length)) {
+    ctx.font = `italic 15px ${F_SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(239,233,221,0.4)';
+    ctx.fillText('Nothing heard on this band', (L + w - R) / 2, (T + base) / 2);
+  }
+  return busy && !still;
+}
+
+/* ================================ channels ================================ */
+const rails = new Map();
+function channelsUpdate(m) {
+  for (const band of [2, 5]) {
+    const nodes = channelStats(m, band).map(r => {
+      const key = band + ':' + r.label;
+      let x = rails.get(key);
+      if (!x) {
+        x = { ch: el('span', { class: 'ch' }), fill: el('i', { class: 'fill' }), val: el('span', { class: 'val' }), tags: el('div', { class: 'tags' }) };
+        x.node = el('div', { class: 'rail' }, x.ch, el('div', { class: 'track' }, x.fill), x.val, x.tags);
+        rails.set(key, x);
+      }
+      setText(x.ch, band === 2 ? r.label.replace('Channel ', '') : r.label.replace('Channels ', '').replace(' to ', '–'));
+      x.fill.style.width = r.level == null ? '0%' : barPct(r.level) + '%';
+      setText(x.val, r.level == null ? 'nothing heard' : `${fmtDb(r.level)} dBm · ${r.n}`);
+      const tags = [];
+      if (r.connected) tags.push(['here', 'You are connected here']);
+      if (r.own) tags.push(['', r.connected ? (r.own === 1 ? 'another of yours overlaps' : `${r.own} more of yours overlap`) : (r.own === 1 ? 'one of yours is here' : `${r.own} of yours are here`)]);
+      if (r.quietest) tags.push(['quiet', 'Quietest from here']);
+      if (r.radar) tags.push(['', 'Radar-shared']);
+      const sig = JSON.stringify(tags);
+      if (x.tags.__sig !== sig) { x.tags.__sig = sig; x.tags.replaceChildren(...tags.map(([cls, text]) => el('span', { class: cls || null, text }))); }
+      x.node.classList.toggle('here', !!r.connected);
+      x.node.classList.toggle('quiet', !!r.quietest);
+      return x.node;
+    });
+    reorder(byId('chan-' + band), nodes);
+  }
+}
+
+/* ================================ the register ================================ */
+const reg = { tab: 'routers', nodes: new Map(), order: { routers: [], bt: [] }, open: { routers: false, bt: false, lan: false }, last: null };
+const REG_LIMIT = 14;
+function moveInk() {
+  const b = document.querySelector(`.tab[data-tab="${reg.tab}"]`), ink = byId('tab-ink');
+  if (!b) return;
+  ink.style.left = b.offsetLeft + 'px';
+  ink.style.width = (b.offsetWidth - (b === b.parentNode.firstElementChild ? 14 : 28)) + 'px';
+  ink.style.transform = b === b.parentNode.firstElementChild ? 'none' : 'translateX(14px)';
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+  if (reg.tab === b.dataset.tab) return;
+  reg.tab = b.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  moveInk();
+  const list = byId('reg-list');
+  list.replaceChildren();
+  if (reg.last) registerUpdate(reg.last);
+  if (!still) list.animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 600, easing: EASE });
+}));
+byId('reg-more').addEventListener('click', () => { reg.open[reg.tab] = !reg.open[reg.tab]; if (reg.last) registerUpdate(reg.last); });
+addEventListener('resize', moveInk);
+
+const routerItem = n => ({
+  id: 'w:' + radioKey(n), cat: n.mine ? 'mine' : 'other', name: n.label, rssi: n.rssi, meta: wifiMeta(n),
+  tags: [n.current ? (n.guess ? 'Probably yours' : 'Connected') : (n.mine ? 'Yours' : null), n.members > 1 ? `${n.members} network names` : null,
+         n.synthetic ? 'Missed by the last scan' : null].filter(Boolean),
+  // Let the user claim a second router or mesh node that uses a different name.
+  act: n.names.length && !n.current ? { text: n.mine ? 'Not mine' : 'Mark as mine', run: () => setClaim(n.names, !n.mine) } : null,
+});
+/* ---------- devices heard in listening mode ---------- */
+// An ordinary scan only hears routers. In listening mode the Mac hears the devices themselves.
+// A pass is a snapshot, not a live reading: its devices stay on the wave field for a quarter of
+// an hour and in the register until the next pass.
+const AIR_FRESH = 15 * 60;
+const airOf = m => (m.st.air && typeof m.st.air === 'object' ? m.st.air : null);   // absent on older app builds
+const clock = t => new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+function heardDevices(m, freshOnly) {
+  const air = airOf(m), res = air && air.result;
+  if (!res || !Array.isArray(res.devices)) return [];
+  if (freshOnly && !(m.st.now - res.at < AIR_FRESH)) return [];
+  const byMac = new Map(m.lan.filter(d => d.mac).map(d => [d.mac, d]));
+  return res.devices.filter(d => d && typeof d.mac === 'string' && Number.isFinite(d.rssi)).map(d => {
+    const known = byMac.get(d.mac) || {}, maker = tidyMaker(known.vendor || d.vendor);
+    return { ...d, at: res.at, name: known.name || known.host || (maker ? `${maker} device` : d.private ? 'Device with a private address' : 'Unnamed device') };
+  });
+}
+// The button that starts a pass, and the line under it that says what happened.
+function listenControl(m) {
+  const air = airOf(m);
+  if (!air) return null;
+  const res = air.result, working = ['password', 'listening', 'reading'].includes(air.state), busy = working || ui.airBusy;
+  const failed = air.state === 'error' && m.st.now - air.since < 600;   // an old failure is not news
+  const label = air.state === 'password' ? 'Waiting for your password…' : working ? `${air.step || 'Listening'}…`
+    : ui.airBusy ? 'Starting…' : res ? 'Listen again' : 'Listen to my devices';
+  let sub;
+  if (working) sub = 'This Mac is off Wi-Fi while it listens. It rejoins by itself in under a minute.';
+  else if (failed) sub = air.error || 'Listening did not work.';
+  else if (res) {
+    const n = res.devices.length, o = (res.others || {}).devices || 0, chans = (res.channels || []).map(c => c.channel);
+    sub = `${n ? `Heard ${count(n, 'device')} of yours` : 'Heard none of your devices'} at ${clock(res.at)}`
+      + (chans.length ? ` on channel${chans.length === 1 ? '' : 's'} ${chans.join(', ')}` : '')
+      + (o ? `, and ${count(o, 'device')} on other networks, which ${o === 1 ? 'is' : 'are'} only counted.` : '.')
+      + ' The strengths are a snapshot of that moment, and a device that was idle or asleep may be missing.'
+      + (res.note ? ` ${res.note}` : '');
+  } else {
+    sub = 'A scan only hears routers. Listening hears the devices themselves: how loudly your TV, cameras and phones transmit, as received at this Mac. It asks for your password, and the Mac drops off Wi-Fi for about half a minute.';
+  }
+  const actions = [{ text: label, disabled: busy, run: () => airCommand('listen') }];
+  if (failed && !busy) actions.push({ text: 'Read a Wireless Diagnostics capture', run: () => airCommand('read') });
+  return { actions, sub };
+}
+async function airCommand(what) {
+  if (ui.airBusy) return;
+  ui.airBusy = true;
+  render();
+  const before = ((ui.data || {}).air || {}).since;
+  try { await fetch('/api/air/' + what, { method: 'POST', headers: { 'X-Signal-Scan': '1' } }); } catch (e) { /* the next poll shows the outcome */ }
+  // The app answers at once: keep the button busy until the reading shows it has started or refused.
+  for (let i = 0; i < 12 && ((ui.data || {}).air || {}).since === before; i++) {
+    await new Promise(r => setTimeout(r, 400));
+    await poll();
+  }
+  ui.airBusy = false;
+  render();
+}
+
+function lanItems(m) {
+  const lanState = m.st.lan || {};
+  if (lanState.blocked) return { items: [], message: 'Waiting for you to choose Allow on the Local Network prompt. Your TV, cameras and phones will be listed here.' };
+  if (lanState.note) return { items: [], message: lanState.note };
+  if (lanState.trusted === false) {
+    // Finding devices means sending a small packet to every address on the network. That is
+    // fine on your own network and unwelcome on an office or public one, so it needs a yes.
+    return { items: [], message: 'Signal Scan only searches networks you have marked as your own, and this one is not marked. Searching sends a tiny packet to every address on the network: fine at home, not something to do on an office or public network.',
+             action: { text: ui.asking ? 'Starting…' : 'This is my own network: search it', disabled: ui.asking, run: () => networkCommand('trust') } };
+  }
+  const ipNum = ip => ip.split('.').reduce((a, p) => a * 256 + Number(p), 0);
+  const rank = d => (d.gateway ? 0 : d.self ? 1 : d.name || d.host ? 2 : tidyMaker(d.vendor) ? 3 : 4);
+  const devs = m.lan.slice().sort((a, b) => rank(a) - rank(b) || ipNum(a.ip) - ipNum(b.ip));
+  const hiddenMakers = devs.filter(d => d.private).length;
+  const message = !devs.length ? 'No devices found yet.'
+    : `Joined to your network ${lanState.subnet || ''} in the last 20 minutes or so.`
+      + (m.st.vendors ? '' : ' Maker names need a vendor list, which is not installed yet.')
+      + (hiddenMakers ? ` ${hiddenMakers} use${hiddenMakers === 1 ? 's' : ''} a private address, which phones and laptops do to avoid tracking and which hides the maker.` : '');
+  const heard = new Map(heardDevices(m, false).map(h => [h.mac, h]));
+  const items = devs.map(d => {
+    const maker = tidyMaker(d.vendor);
+    const h = d.mac ? heard.get(d.mac) : null;
+    // A device whose address is a sibling of a router's radio address is that router's wired side.
+    const direct = d.mac ? m.nets.filter(n => sibling(n.bssid, d.mac)) : [];
+    const radios = m.nets.filter(n => direct.some(r => r === n || sibling(r.bssid, n.bssid)));   // its other band too
+    const sends = [...new Set(radios.flatMap(n => n.names))];
+    const isRouter = !!d.gateway || radios.length > 0;
+    const named = d.name || d.host || (d.gateway ? 'Your router' : null);
+    const name = named || (maker ? `${maker} ${isRouter ? 'router' : 'device'}` : 'Unidentified device');
+    const meta = [d.ip, d.mac, named ? maker : null,   // when the maker is the row's name, do not repeat it
+                  !isRouter && maker && INSIDE.test(maker) ? 'a maker of Wi-Fi hardware built into other brands’ products' : null,
+                  d.model && !name.includes(d.model) ? d.model : null,
+                  sends.length ? `broadcasts ${sends.join(', ')}` : null,
+                  ...(d.kinds || []), h && h.channel ? `heard on channel ${h.channel}` : null].filter(Boolean).join(' · ');
+    return { id: 'l:' + (d.mac || d.ip), cat: 'lan', name, meta, rssi: h ? h.rssi : null, tags: [isRouter ? 'Router' : null, d.private ? 'Private address' : null].filter(Boolean) };
+  });
+  // Heard talking to your router but missing from the list: asleep when the list was made, or missed by it.
+  for (const h of heard.values()) {
+    if (devs.some(d => d.mac === h.mac)) continue;
+    items.push({ id: 'l:' + h.mac, cat: 'lan', name: h.name, rssi: h.rssi, tags: [h.private ? 'Private address' : null].filter(Boolean),
+                 meta: [h.mac, h.channel ? `heard on channel ${h.channel}` : null, 'not in the list of joined devices'].filter(Boolean).join(' · ') });
+  }
+  // Loudest first once there is something to rank by; the rest keep their order.
+  if (heard.size) items.sort((a, b) => (b.rssi == null ? -999 : b.rssi) - (a.rssi == null ? -999 : a.rssi));
+  const forget = { text: 'Not my network: stop searching it', run: () => networkCommand('forget') };
+  if (!lanState.trusted) return { items, message, action: null };
+  const listen = listenControl(m);
+  return { items, message, actions: listen ? [...listen.actions, forget] : [forget], sub: listen ? listen.sub : '' };
+}
+function regRow(it) {
+  const key = reg.tab + '|' + it.id;
+  let r = reg.nodes.get(key);
+  if (!r) {
+    r = { g: el('i', { class: 'glyph' }), name: el('span', { class: 'nm' }), tags: el('span', { class: 'tags' }), meta: el('span', { class: 'meta' }),
+          fill: el('i'), db: el('span', { class: 'db' }), act: el('button', { class: 'link', type: 'button', hidden: true }) };
+    r.lvl = el('span', { class: 'lvl' }, el('span', { class: 'bar' }, r.fill), r.db);
+    r.node = el('li', null, r.g, el('span', { class: 'who' }, r.name, r.tags), r.meta, r.lvl, r.act);
+    r.act.addEventListener('click', () => { if (r.item && r.item.act) r.item.act.run(); });
+    reg.nodes.set(key, r);
+  }
+  r.item = it;
+  r.g.className = 'glyph ' + (it.cat === 'bt' ? 'dot' : it.cat === 'lan' ? 'ring' : 'sq');
+  r.g.style.color = HEX[it.cat];
+  setText(r.name, it.name);   // names come off the air: text only
+  const tagSig = it.tags.join('|');
+  if (r.tags.__sig !== tagSig) { r.tags.__sig = tagSig; r.tags.replaceChildren(...it.tags.map(t => el('b', { text: t }))); }
+  setText(r.meta, it.meta || '');
+  r.lvl.hidden = it.rssi == null;
+  if (it.rssi != null) { r.fill.style.width = barPct(it.rssi) + '%'; r.fill.style.background = HEX[it.cat]; setText(r.db, fmtDb(it.rssi)); }
+  r.act.hidden = !it.act;
+  if (it.act) setText(r.act, it.act.text);
+  return r.node;
+}
+function registerUpdate(m) {
+  reg.last = m;
+  const lanState = m.st.lan || {};
+  setText(byId('n-routers'), String(m.nets.length));
+  setText(byId('n-bt'), String(m.ble.length));
+  setText(byId('n-lan'), lanState.trusted === false || lanState.blocked || lanState.note ? '—' : String(m.lan.length));
+  moveInk();
+  let items = [], message = '', action = null, actions = null, sub = '';
+  if (reg.tab === 'routers') {
+    items = m.nets.map(routerItem);
+    message = items.length ? 'A dual-band router appears once per band. If a second router or mesh unit of yours uses a different name, mark it as yours.' : 'No Wi-Fi routers heard yet.';
+  } else if (reg.tab === 'bt') {
+    const state = (m.st.ble || {}).state, permission = (m.st.ble || {}).permission;
+    items = m.ble.map(d => ({ id: 'b:' + d.id, cat: 'bt', name: bleName(d), meta: bleMeta(d), rssi: d.rssi, tags: [] }));
+    message = items.length ? 'Anything that announced itself in the last minute, yours or a neighbour’s.'
+      : state === 'on' ? 'Listening. No Bluetooth devices heard yet.'
+      : (state === 'unauthorized' || permission === 'denied') ? 'Blocked until Signal Scan is allowed to use Bluetooth.'
+      : state === 'off' ? 'Bluetooth is turned off on this Mac.'
+      : permission === 'notDetermined' ? 'Waiting for you to choose Allow on the Bluetooth prompt.' : 'Starting Bluetooth…';
+  } else {
+    ({ items, message, action, actions, sub } = lanItems(m));
+  }
+  let ordered = items;
+  if (reg.tab !== 'lan') {
+    const byKey = new Map(items.map(it => [it.id, it]));
+    reg.order[reg.tab] = stableOrder(reg.order[reg.tab], items, it => it.rssi, 3);
+    ordered = reg.order[reg.tab].map(id => byKey.get(id)).filter(Boolean);
+  }
+  const keep = new Set(items.map(it => reg.tab + '|' + it.id));
+  for (const k of [...reg.nodes.keys()]) if (k.startsWith(reg.tab + '|') && !keep.has(k)) reg.nodes.delete(k);
+  reorder(byId('reg-list'), ordered.slice(0, reg.open[reg.tab] ? Infinity : REG_LIMIT).map(regRow));
+  const acts = actions || (action ? [action] : []);
+  const note = byId('reg-note'), sig = JSON.stringify([message, sub, acts.map(a => [a.text, !!a.disabled])]);
+  if (note.__sig !== sig) {
+    note.__sig = sig;
+    note.replaceChildren(el('span', { text: message }),
+      ...acts.map(a => el('button', { class: 'pill', type: 'button', disabled: !!a.disabled, text: a.text, onclick: a.run })),
+      sub ? el('span', { class: 'sub', text: sub }) : '');
+  }
+  const more = byId('reg-more');
+  more.hidden = ordered.length <= REG_LIMIT;
+  setText(more, reg.open[reg.tab] ? 'Show fewer' : `Show all ${ordered.length}`);
+}
+
+/* ================================ your body ================================ */
+// How much radio power reaches you, compared with the international limit for the public
+// (ICNIRP 2020: 10 W/m² from 2 to 300 GHz, averaged over 30 minutes). A received strength
+// becomes a power density through the antenna's capture area, λ²/4π for a simple antenna.
+const LIMIT = 10;
+const TRIAL = [2.2e-3, 7e-3];   // W/m², peaks measured 2 m from the baby monitor in Bijlsma 2024
+const FREQ = { 2: 2.44e9, 5: 5.5e9, 6: 6.5e9 };
+const powerDensity = (dbm, band) => {
+  const lam = 3e8 / (FREQ[band] || FREQ[2]);
+  return Math.pow(10, (dbm - 30) / 10) * 4 * Math.PI / (lam * lam);
+};
+const sig2 = v => Number(v.toPrecision(2)).toLocaleString('en');
+function fmtDensity(s) {
+  if (s >= 1) return `${sig2(s)} W/m²`;
+  if (s >= 1e-3) return `${sig2(s * 1e3)} mW/m²`;
+  return `${sig2(s * 1e6)} µW/m²`;
+}
+const dose = { box: byId('dose-box'), canvas: byId('dose'), total: null, top: null, xt: null, vt: 0, xs: null, vs: 0 };
+function bodyUpdate(m) {
+  const levels = [...m.nets.map(n => powerDensity(n.rssi, n.band)), ...m.ble.map(d => powerDensity(d.rssi, 2)),
+                  ...heardDevices(m, true).map(d => powerDensity(d.rssi, d.band || 2))].filter(Number.isFinite);
+  const head = byId('dose-head'), note = byId('dose-note');
+  if (!levels.length) { setText(head, 'Waiting for readings…'); setText(note, ''); setText(byId('sleep-scale'), ''); dose.total = null; wake(doseLoop); return; }
+  const total = levels.reduce((a, b) => a + b, 0), top = Math.max(...levels), times = LIMIT / total;
+  dose.total = total; dose.top = top;
+  const sig = sig2(times);
+  if (head.__sig !== sig) {
+    head.__sig = sig;
+    head.replaceChildren(...(times >= 1 ? ['About ', el('em', { text: sig }), ' times below the safety limit.'] : ['Above the safety limit.']));
+    if (!still && head.closest('.in')) head.animate([{ opacity: 0.3, filter: 'blur(3px)' }, { opacity: 1, filter: 'none' }], { duration: 700, easing: EASE });
+  }
+  const pct = total / LIMIT * 100;
+  setText(note, `Everything this Mac hears, added up, comes to about ${fmtDensity(total)}: ${pct < 0.001 ? pct.toExponential(1) : sig2(pct)}% of the `
+    + `international limit for the public, which is ${LIMIT} W/m². That assumes every router and device transmits non-stop; they actually send short bursts, `
+    + `so the real average is lower. The estimate treats the Mac's antenna as a simple one and could be off by about ten times either way. `
+    + `The limit exists to stop radio energy heating the body. It does not settle the sleep question: the brain-wave changes described below happen at levels the limit allows.`);
+  setText(byId('sleep-scale'), `For scale: the baby-monitor trial measured peaks of ${fmtDensity(TRIAL[0])} to ${fmtDensity(TRIAL[1])} two metres from the device. `
+    + `Everything this Mac hears right now adds up to about ${fmtDensity(total)}, counted as if every device transmitted non-stop. `
+    + `The phone-at-the-head experiments are far stronger than either and cannot be put on this scale.`);
+  wake(doseLoop);
+}
+function doseLoop(t, dt) {
+  const box = dose.box, c = dose.canvas;
+  if (!isOn(box)) return false;
+  const w = box.clientWidth, h = box.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return false;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const L = 30, R = 8, base = h - 34, lo = -7, hi = 1.6;   // 0.1 µW/m² to 40 W/m², ten times per step
+  const X = s => L + (clamp(Math.log10(Math.max(s, 1e-12)), lo, hi) - lo) / (hi - lo) * (w - L - R);
+  // The scale: one tick for every tenfold step.
+  ctx.strokeStyle = 'rgba(239,233,221,0.22)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - R, base + 0.5); ctx.stroke();
+  const names = { '-7': '0.1 µW', '-6': '1 µW', '-5': '10 µW', '-4': '100 µW', '-3': '1 mW', '-2': '10 mW', '-1': '100 mW', '0': '1 W', '1': '10 W' };
+  ctx.font = `500 10px ${F_MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const step = w < 560 ? 2 : 1;
+  for (let e = lo; e <= 1; e++) {
+    const x = Math.round(X(Math.pow(10, e))) + 0.5;
+    ctx.strokeStyle = 'rgba(239,233,221,0.22)';
+    ctx.beginPath(); ctx.moveTo(x, base - 4); ctx.lineTo(x, base + 4); ctx.stroke();
+    if ((e - lo) % step === 0 || e === 1) { ctx.fillStyle = 'rgba(239,233,221,0.42)'; ctx.fillText(names[e], x, base + 10); }
+  }
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(239,233,221,0.3)';
+  ctx.fillText('per m²', w - R, base + 22);
+  // The limit, and the region beyond it.
+  const xl = X(LIMIT);
+  ctx.fillStyle = 'rgba(255,193,99,0.06)'; ctx.fillRect(xl, 8, w - R - xl, base - 8);
+  ctx.save(); ctx.shadowColor = '#ffc163'; ctx.shadowBlur = 12;
+  ctx.strokeStyle = '#ffc163'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(xl, 8); ctx.lineTo(xl, base); ctx.stroke(); ctx.restore();
+  ctx.font = `600 10px ${F_MONO}`; ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillStyle = '#ffc163';
+  ctx.fillText('SAFETY LIMIT', xl - 8, 10);
+  // The level in the one home trial that found worse self-rated sleep.
+  const xa = X(TRIAL[0]), xb = X(TRIAL[1]);
+  ctx.strokeStyle = 'rgba(239,233,221,0.5)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(xa, base); ctx.lineTo(xb, base); ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(xa, base - 5); ctx.lineTo(xa, base + 5); ctx.moveTo(xb, base - 5); ctx.lineTo(xb, base + 5); ctx.stroke();
+  ctx.font = `500 10px ${F_MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillStyle = 'rgba(239,233,221,0.55)';
+  ctx.fillText(w < 560 ? 'sleep trial' : '2024 baby-monitor sleep trial', xa, base - 30);
+  let busy = false;
+  if (dose.total != null) {
+    const tt = X(dose.total), ts = X(dose.top);
+    if (dose.xt == null) { dose.xt = still ? tt : L; dose.xs = still ? ts : L; }
+    if (still) { dose.xt = tt; dose.xs = ts; }
+    else { [dose.xt, dose.vt] = springStep(dose.xt, dose.vt, tt, 10, dt); [dose.xs, dose.vs] = springStep(dose.xs, dose.vs, ts, 10, dt); }
+    busy = Math.abs(tt - dose.xt) > 0.2 || Math.abs(dose.vt) > 0.2 || Math.abs(ts - dose.xs) > 0.2;
+    // The gap between you and the limit.
+    const y = base - 52;
+    ctx.strokeStyle = 'rgba(239,233,221,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(dose.xt + 10, y); ctx.lineTo(xl - 6, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xl - 12, y - 4); ctx.lineTo(xl - 6, y); ctx.lineTo(xl - 12, y + 4); ctx.stroke();
+    ctx.font = `italic 400 22px ${'Didot, "Bodoni 72", Georgia, serif'}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = PAPER;
+    ctx.fillText(`× ${sig2(LIMIT / dose.total)}`, (dose.xt + xl) / 2, y - 6);
+    // Strongest single signal, then everything together.
+    ctx.fillStyle = HEX.mine; ctx.globalAlpha = 0.8;
+    ctx.beginPath(); ctx.arc(dose.xs, base, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    const g = ctx.createRadialGradient(dose.xt, base, 0, dose.xt, base, 26);
+    g.addColorStop(0, 'rgba(239,233,221,0.35)'); g.addColorStop(1, 'rgba(239,233,221,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(dose.xt, base, 26, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(dose.xt, base, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.font = `600 11px ${F_SANS}`; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    const label = 'All signals at your seat', lw = ctx.measureText(label).width, lx = clamp(dose.xt + 8 - lw, L, w - R - lw);
+    ctx.fillText(label, lx, base - 12);
+  }
+  return busy && !still;
+}
+track(dose.box, () => wake(doseLoop));
+
+/* ================================ blind sleep trial ================================ */
+// A home test of whether the Wi-Fi being on changes your sleep. The app draws a random plan (half
+// the nights off, half on), shows it to a helper only, takes a score each morning and does the sums
+// at the end. Everything is kept in this browser's storage on this Mac; nothing is sent anywhere.
+const TRIAL_KEY = 'signalscan.sleeptrial';
+const tbox = byId('trial-log');
+let tr = null, trialView = null, trialSig = '', trialNights = 14, draft = null, actualDraft = null;
+try { const t = JSON.parse(localStorage.getItem(TRIAL_KEY) || 'null'); if (t && t.v === 1 && t.entries) tr = t; } catch (e) { /* private window */ }
+function trialSave() {
+  try { if (tr) localStorage.setItem(TRIAL_KEY, JSON.stringify(tr)); else localStorage.removeItem(TRIAL_KEY); } catch (e) { /* kept for this visit only */ }
+}
+
+const pad2 = n => String(n).padStart(2, '0');
+const dayKey = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const dayDate = key => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const sleepDay = () => dayKey(new Date(Date.now() - 5 * 3600e3));   // a night belongs to the day it began: before 5 am is still "yesterday"
+const daysFrom = (a, b) => Math.round((dayDate(b) - dayDate(a)) / 86400e3);
+const nightDate = k => { const d = dayDate(tr.start); d.setDate(d.getDate() + k - 1); return d; };
+const dayLabel = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
+// 1 = Wi-Fi off. Exactly half of each, in an order nobody can predict.
+function drawPlan(n) {
+  const bits = Array.from({ length: n }, (_, i) => (i < n / 2 ? 1 : 0)), rnd = new Uint32Array(n);
+  crypto.getRandomValues(rnd);
+  for (let i = n - 1; i > 0; i--) { const j = rnd[i] % (i + 1); [bits[i], bits[j]] = [bits[j], bits[i]]; }
+  return btoa('plan:' + bits.join(''));   // not a secret from a determined sleeper, only kept off the screen
+}
+const readPlan = s => atob(s).slice(5).split('').map(Number);
+
+function trialNow() {
+  const elapsed = clamp(daysFrom(tr.start, sleepDay()), 0, tr.nights);   // nights whose morning has come
+  let due = 0;
+  for (let k = 1; k <= elapsed; k++) if (!tr.entries[k]) { due = k; break; }
+  return { elapsed, due, scored: Object.values(tr.entries).filter(e => e.q).length };
+}
+
+/* ---------- small pieces ---------- */
+// A row of choices where one is pressed. It keeps its own state, so a form is never rebuilt mid-answer.
+function pick(options, value, onChange, cls, label) {
+  const box = el('div', { class: 'pick' + (cls ? ' ' + cls : ''), role: 'group', 'aria-label': label });
+  for (const [v, text] of options) {
+    box.append(el('button', { type: 'button', 'aria-pressed': String(v === value), text, onclick: e => {
+      for (const b of box.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+      onChange(v);
+    } }));
+  }
+  return box;
+}
+const pill = (text, fn, solid) => el('button', { class: 'pill' + (solid ? ' solid' : ''), type: 'button', onclick: fn, text });
+const tlink = (text, fn) => el('button', { class: 'tlink', type: 'button', onclick: fn, text });
+const go = view => () => { trialView = view; trialRender(); };
+const ask = (text, yes, fn) => el('div', { class: 'ask' }, el('p', { text }), el('div', { class: 'row' }, pill(yes, fn, true), tlink('Cancel', go(null))));
+
+function planList(bits, onFlip) {
+  return el('div', { class: 'plan' }, bits.map((b, i) => {
+    const kids = [el('span', { text: `Night ${i + 1} · ${dayLabel(nightDate(i + 1))}` }), el('b', { text: b ? '○ Wi-Fi off' : '● Wi-Fi on' })];
+    return onFlip ? el('button', { class: 'n', type: 'button', title: 'Change this night', onclick: () => onFlip(i) }, kids) : el('div', { class: 'n' }, kids);
+  }));
+}
+
+/* ---------- the screens ---------- */
+function trialIntro() {
+  return [
+    el('p', { class: 'eyebrow', text: 'Your trial' }),
+    el('h4', {}, 'Let the app ', el('em', { text: 'keep the secret.' })),
+    el('p', { text: 'It draws a random plan, half the nights with Wi-Fi off and half with it on, shows it only to your helper, takes your score each morning and does the sums at the end. Everything stays in this browser on this Mac.' }),
+    el('div', { class: 'row' },
+      el('span', { class: 'lab', text: 'Nights' }),
+      pick([14, 20, 28].map(n => [n, String(n)]), trialNights, v => { trialNights = v; }, 'big', 'Number of nights'),
+      pill('Start tonight', trialStart, true)),
+    el('p', { class: 'fine', text: 'More nights give a surer answer. While the Wi-Fi is off, cameras, doorbells and smart plugs that use it stop working.' }),
+  ];
+}
+function trialStart() {
+  tr = { v: 1, start: sleepDay(), nights: trialNights, plan: drawPlan(trialNights), entries: {}, revealed: false };
+  trialSave(); trialView = 'handover'; trialRender();
+}
+function trialReset() { tr = null; draft = null; actualDraft = null; trialView = null; trialSave(); trialRender(); }
+
+function trialHandover() {
+  return [
+    el('p', { class: 'eyebrow', text: 'For your helper only' }),
+    el('h4', {}, 'Sleeper, ', el('em', { text: 'look away now.' })),
+    el('p', { text: 'Hand the Mac to the person who will control the Wi-Fi. They open the plan, photograph it, and hide it again.' }),
+    el('div', { class: 'row' }, pill('I am the helper: show the plan', go('plan'), true)),
+  ];
+}
+function trialPlan() {
+  return [
+    el('p', { class: 'eyebrow', text: 'For your helper only' }),
+    el('h4', {}, 'The plan for ', el('em', { text: `${tr.nights} nights.` })),
+    el('p', { text: 'Photograph this or write it down. Each evening, once the sleeper is in bed, switch the Wi-Fi off on every router, or leave it on, as listed. Have it back on before they get up, and do not tell them which it was.' }),
+    planList(readPlan(tr.plan)),
+    el('div', { class: 'row' }, pill('Hide it and begin', go(null), true)),
+  ];
+}
+
+function trialForm(k, latest) {
+  if (!draft || draft.k !== k) draft = { k, q: 0, guess: '', lat: '', wake: '', note: '' };
+  const d = draft;
+  const saveBtn = pill('Save this night', () => {
+    if (!d.q) return;
+    const num = (v, max) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 && n <= max ? n : null; };
+    tr.entries[k] = { q: d.q, guess: d.guess || null, lat: num(d.lat, 600), wake: num(d.wake, 60), note: d.note.trim().slice(0, 200) || null, at: new Date().toISOString() };
+    draft = null; trialSave(); trialRender();
+  }, true);
+  saveBtn.disabled = !d.q;
+  const field = (label, key, attrs) => el('label', { class: 'fld' }, el('span', { class: 'lab', text: label }),
+    el('input', Object.assign({ value: d[key], oninput: e => { d[key] = e.target.value; } }, attrs)));
+  return [
+    el('h4', {}, latest ? 'How did you ' : `Night ${k}, ${dayLabel(nightDate(k))}: how did you `, el('em', { text: 'sleep?' })),
+    el('p', { text: 'Score it before you look at anything that could tell you whether the Wi-Fi was on.' }),
+    el('div', { class: 'row' },
+      el('span', { class: 'lab', text: 'Terrible' }),
+      pick(Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)]), d.q, v => { d.q = v; saveBtn.disabled = false; }, 'big', 'Sleep score from 1 to 10'),
+      el('span', { class: 'lab', text: 'Excellent' })),
+    el('div', { class: 'row' },
+      field('Minutes to fall asleep', 'lat', { type: 'number', inputmode: 'numeric', min: 0, max: 600, placeholder: '—' }),
+      field('Times you woke', 'wake', { type: 'number', inputmode: 'numeric', min: 0, max: 60, placeholder: '—' })),
+    el('div', { class: 'row' },
+      el('span', { class: 'lab', text: 'Your guess: the Wi-Fi was' }),
+      pick([['on', 'On'], ['off', 'Off'], ['', 'Can’t tell']], d.guess, v => { d.guess = v; }, '', 'Your guess')),
+    el('div', { class: 'row' }, field('Anything unusual? (optional)', 'note', { type: 'text', maxlength: 200, placeholder: 'late coffee, a cold, a noisy night…' })),
+    el('div', { class: 'row' }, saveBtn, tlink('I can’t score this night', () => { tr.entries[k] = { skip: true }; draft = null; trialSave(); trialRender(); })),
+  ];
+}
+
+function trialRunning() {
+  const { elapsed, due, scored } = trialNow(), N = tr.nights, over = elapsed >= N;
+  const out = [
+    el('p', { class: 'eyebrow', text: `Your trial · ${over ? `all ${N} nights are over` : `night ${elapsed + 1} of ${N} is tonight`} · ${scored} scored` }),
+    el('div', { class: 'ticks', role: 'img', 'aria-label': `${scored} of ${N} nights scored` }, Array.from({ length: N }, (_, i) => {
+      const k = i + 1, e = tr.entries[k];
+      return el('i', { class: e ? (e.q ? 'done' : 'skip') : k <= elapsed ? 'due' : k === elapsed + 1 ? 'tonight' : '', title: `Night ${k} · ${dayLabel(nightDate(k))}` });
+    })),
+  ];
+  if (trialView === 'peek') out.push(ask('Only your helper should open the plan. If you are the sleeper, seeing it spoils the test.', 'Show the plan', go('plan')));
+  else if (trialView === 'end') out.push(ask(`This ends the trial and shows which nights were which. Do it together with your helper.${over ? '' : ` Only ${scored} of ${N} nights are scored so far.`}`, 'End it and reveal', go('confirm')));
+  else if (trialView === 'reset') out.push(ask('This deletes the trial and every score in it.', 'Delete it', trialReset));
+  else if (due) out.push(...trialForm(due, due === elapsed));
+  else if (over) out.push(
+    el('h4', {}, 'Ready to ', el('em', { text: 'reveal.' })),
+    el('p', { text: 'Sit down with your helper. They confirm what actually happened each night, then the app shows the result.' }),
+    el('div', { class: 'row' }, pill('Reveal with my helper', go('confirm'), true)));
+  else out.push(
+    el('h4', {}, 'Nothing to score ', el('em', { text: 'until morning.' })),
+    el('p', { text: 'Tonight: same bedtime, phone in flight mode and out of reach. Tomorrow, open this page and score the night before you look at anything else.' }));
+  const links = [tlink('Helper: see the plan again', go('peek')), tlink('Download the log', trialCsv)];
+  if (!over || due) links.push(tlink('End early and reveal', go('end')));
+  links.push(tlink('Start over', go('reset')));
+  out.push(el('div', { class: 'tlinks' }, links));
+  return out;
+}
+
+function trialConfirm() {
+  if (!actualDraft) actualDraft = readPlan(tr.plan);
+  return [
+    el('p', { class: 'eyebrow', text: 'Reveal · with your helper' }),
+    el('h4', {}, 'Did every night ', el('em', { text: 'go to plan?' })),
+    el('p', { text: 'Helper: this was the plan. Press any night where the Wi-Fi was not as listed to change it, then confirm.' }),
+    planList(actualDraft, i => { actualDraft[i] = actualDraft[i] ? 0 : 1; trialRender(); }),
+    el('div', { class: 'row' }, pill('Confirm and show the result', () => {
+      tr.actual = actualDraft.join(''); tr.revealed = true; tr.ended = new Date().toISOString();
+      actualDraft = null; trialView = null; trialSave(); trialRender();
+    }, true)),
+  ];
+}
+
+/* ---------- the sums ---------- */
+// How often a gap between the two groups at least this large turns up if on and off make no
+// difference: deal the same scores into two groups every possible way and count.
+function permutationP(a, b) {
+  const all = [...a, ...b], n = all.length, k = a.length, total = all.reduce((s, v) => s + v, 0);
+  const gap = s => Math.abs(s / k - (total - s) / (n - k));
+  const seen = gap(a.reduce((s, v) => s + v, 0)) - 1e-9;
+  let ways = 1;
+  for (let i = 1; i <= k; i++) ways = ways * (n - k + i) / i;
+  let hits = 0, tries = 0;
+  if (ways <= 250000) {
+    const idx = Array.from({ length: k }, (_, i) => i);
+    for (;;) {
+      let s = 0;
+      for (const i of idx) s += all[i];
+      tries++;
+      if (gap(s) >= seen) hits++;
+      let i = k - 1;
+      while (i >= 0 && idx[i] === n - k + i) i--;
+      if (i < 0) break;
+      idx[i]++;
+      for (let j = i + 1; j < k; j++) idx[j] = idx[j - 1] + 1;
+    }
+  } else {   // too many ways to list: deal at random, the same way every time for the same scores
+    let seed = (0x9e3779b9 ^ (n * 131 + k)) >>> 0;
+    for (const v of all) seed = Math.imul(seed ^ v, 0x85ebca6b) >>> 0;
+    const rand = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const pool = all.slice();
+    for (tries = 0; tries < 40000; tries++) {
+      let s = 0;
+      for (let i = 0; i < k; i++) { const j = i + Math.floor(rand() * (n - i)); [pool[i], pool[j]] = [pool[j], pool[i]]; s += pool[i]; }
+      if (gap(s) >= seen) hits++;
+    }
+  }
+  return hits / tries;
+}
+// The chance of at least k right out of n by blind guessing.
+function guessChance(k, n) {
+  let c = 1, sum = 0;
+  for (let i = 0; i <= n; i++) { if (i >= k) sum += c; c = c * (n - i) / (i + 1); }
+  return sum / Math.pow(2, n);
+}
+function trialStats() {
+  const bits = tr.actual.split('').map(Number), off = [], on = [], rows = [];
+  let right = 0, guessed = 0;
+  for (let k = 1; k <= tr.nights; k++) {
+    const e = tr.entries[k], isOff = bits[k - 1] === 1;
+    rows.push({ k, isOff, e });
+    if (!e || !e.q) continue;
+    (isOff ? off : on).push(Object.assign({ k }, e));
+    if (e.guess) { guessed++; if ((e.guess === 'off') === isOff) right++; }
+  }
+  const mean = a => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : null);
+  const of = (list, key) => list.map(e => e[key]).filter(v => v != null);
+  const qOff = of(off, 'q'), qOn = of(on, 'q'), enough = qOff.length >= 4 && qOn.length >= 4;
+  return { rows, off, on, qOff, qOn, enough, right, guessed,
+    mOff: mean(qOff), mOn: mean(qOn), diff: qOff.length && qOn.length ? mean(qOff) - mean(qOn) : null,
+    p: enough ? permutationP(qOff, qOn) : null, pGuess: guessed >= 6 ? guessChance(right, guessed) : null,
+    latOff: of(off, 'lat'), latOn: of(on, 'lat'), wakeOff: of(off, 'wake'), wakeOn: of(on, 'wake'), mean };
+}
+
+function trialResults() {
+  const s = trialStats(), one = v => neg(v.toFixed(1)), em = text => el('em', { text });
+  const told = s.pGuess != null && s.pGuess <= 0.05;   // the guesses beat luck: the sleeper was not really blind
+  let head, meaning;
+  if (!s.enough) {
+    head = ['Too few scored nights ', em('to say anything.')];
+    meaning = 'A fair comparison needs at least four scored nights of each kind. Run it again and score every morning.';
+  } else if (s.p <= 0.05 && s.diff >= 0.5 && told) {
+    head = ['You slept ', em('better with the Wi-Fi off'), ', but you could tell which nights those were.'];
+    meaning = 'Because you could tell, this trial cannot separate the signal from knowing about it. Find what gave the plan away (a router light, a device that went offline) and run it again.';
+  } else if (s.p <= 0.05 && s.diff >= 0.5) {
+    head = ['You slept ', em('better with the Wi-Fi off'), ', without knowing which nights those were.'];
+    meaning = 'That is real evidence that the signal affects your sleep. One trial can still mislead, so run it once more before you rearrange the house around it.';
+  } else if (s.p <= 0.05 && s.diff <= -0.5) {
+    head = ['You slept ', em('better with the Wi-Fi on.')];
+    meaning = 'That is the opposite of what you noticed before, which points to chance or to something else that differed on those nights. Run it again.';
+  } else if (s.p <= 0.2 && Math.abs(s.diff) >= 0.5) {
+    head = [`A hint that you sleep better with it ${s.diff > 0 ? 'off' : 'on'}, `, em('not proof.')];
+    meaning = 'It could be real or it could be luck. A longer trial, 20 or 28 nights, would settle it.';
+  } else {
+    head = ['No difference ', em('beyond chance'), ' between the on and off nights.'];
+    meaning = 'Whatever makes switching everything off feel better, this test did not find it in the Wi-Fi signal itself. The routine that goes with it (a dark room, no screens, no notifications) is still worth keeping.';
+  }
+  const shown = s.diff == null ? null : Math.round((Number(s.mOff.toFixed(1)) - Number(s.mOn.toFixed(1))) * 10) / 10;
+  const fig = (label, value, sub) => el('div', { class: 'res-fig' }, el('p', { class: 'lab', text: label }), el('p', { class: 'v', text: value }), el('p', { class: 's', text: sub }));
+  const out = [
+    el('p', { class: 'eyebrow', text: `Result · ${tr.nights} nights, ${s.qOff.length + s.qOn.length} scored` }),
+    el('h4', { class: 'wide' }, head),
+    el('div', { class: 'res-figs' },
+      fig('Wi-Fi off', s.mOff == null ? '—' : one(s.mOff), `average of ${count(s.qOff.length, 'night')}`),
+      fig('Wi-Fi on', s.mOn == null ? '—' : one(s.mOn), `average of ${count(s.qOn.length, 'night')}`),
+      fig('Difference', shown == null ? '—' : (shown > 0 ? '+' : '') + one(shown), shown == null ? 'not enough nights' : shown === 0 ? 'no gap' : `points better with it ${shown > 0 ? 'off' : 'on'}`)),
+  ];
+  // Every scored night as a dot on the 1 to 10 scale, off nights above on nights.
+  const track = (label, list, m) => {
+    const stack = {}, trk = el('div', { class: 'trk' });
+    let tallest = 1;
+    for (const e of list) {
+      const n = stack[e.q] = (stack[e.q] || 0) + 1;
+      tallest = Math.max(tallest, n);
+      trk.append(el('i', { style: `left:${(e.q - 1) / 9 * 100}%;bottom:${6 + (n - 1) * 13}px`, title: `Night ${e.k}: ${e.q}` }));
+    }
+    trk.style.height = `${Math.max(46, 12 + tallest * 13)}px`;   // room for the tallest pile of equal scores
+    if (m != null) trk.append(el('u', { style: `left:${(m - 1) / 9 * 100}%`, 'data-v': `average ${one(m)}` }));
+    return el('div', { class: 'r' }, el('span', { class: 'lab', text: label }), trk);
+  };
+  out.push(el('div', { class: 'dots', role: 'img', 'aria-label': 'Sleep scores on the off nights and the on nights' },
+    track('Wi-Fi off', s.off, s.mOff), track('Wi-Fi on', s.on, s.mOn),
+    el('div', { class: 'ax' }, el('span'), el('div', {}, Array.from({ length: 10 }, (_, i) => el('span', { style: `left:${i / 9 * 100}%`, text: String(i + 1) }))))));
+  const notes = [meaning];
+  if (s.enough) {
+    const pc = s.p * 100, chance = pc < 1 ? 'fewer than 1 in every 100 trials' : pc >= 99.5 ? 'almost every trial' : `about ${Math.round(pc)} in every 100 trials`;
+    notes.unshift(`If the Wi-Fi made no difference at all, a gap this large would still turn up by chance in ${chance} like this one.`);
+  }
+  if (s.guessed) {
+    let g = `You guessed right on ${s.right} of ${count(s.guessed, 'night')}; guessing blind gets about half.`;
+    if (told) g += ' That is better than luck, so something gave the plan away: a router light, a device that went offline, or the signal itself.';
+    notes.push(g);
+  }
+  const avg = a => Math.round(s.mean(a));
+  if (s.latOff.length >= 3 && s.latOn.length >= 3) notes.push(`Time to fall asleep: about ${avg(s.latOff)} minutes with it off, ${avg(s.latOn)} with it on.`);
+  if (s.wakeOff.length >= 3 && s.wakeOn.length >= 3) notes.push(`Times you woke: ${one(s.mean(s.wakeOff))} a night with it off, ${one(s.mean(s.wakeOn))} with it on.`);
+  out.push(el('div', { class: 'res-notes' }, notes.map(text => el('p', { text }))));
+  out.push(el('div', { class: 'scroll' }, el('table', { class: 'nights' },
+    el('thead', {}, el('tr', {}, ['Night', 'Wi-Fi', 'Score', 'To sleep', 'Woke', 'Your guess', 'Note'].map(text => el('th', { text })))),
+    el('tbody', {}, s.rows.map(({ k, isOff, e }) => {
+      const scored = e && e.q, guess = scored && e.guess ? `${e.guess} ${(e.guess === 'off') === isOff ? '✓' : '✕'}` : '—';
+      return el('tr', {}, [`${k} · ${dayLabel(nightDate(k))}`, isOff ? '○ off' : '● on', scored ? String(e.q) : 'not scored',
+        scored && e.lat != null ? `${e.lat} min` : '—', scored && e.wake != null ? String(e.wake) : '—', guess, scored && e.note ? e.note : '']
+        .map((text, i) => el('td', { class: i === 2 && scored ? 'sc' : null, text })));
+    })))));
+  if (trialView === 'reset') out.push(ask('This deletes this trial and its scores. Download the log first if you want to keep it.', 'Delete and start a new one', trialReset));
+  else out.push(el('div', { class: 'row' }, pill('Download the log', trialCsv), pill('Start a new trial', go('reset'))));
+  return out;
+}
+
+function trialCsv() {
+  const bits = tr.revealed ? tr.actual.split('') : null;
+  const text = v => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return `"${s.replace(/"/g, '""')}"`; };
+  const lines = ['night,date,wifi,sleep_score,minutes_to_fall_asleep,times_woken,guess,note'];
+  for (let k = 1; k <= tr.nights; k++) {
+    const e = tr.entries[k] || {};
+    lines.push([k, dayKey(nightDate(k)), bits ? (bits[k - 1] === '1' ? 'off' : 'on') : 'hidden until the reveal', e.q || '', e.lat == null ? '' : e.lat, e.wake == null ? '' : e.wake, e.guess || '', text(e.note)].join(','));
+  }
+  const a = el('a', { href: URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' })), download: `sleep-trial-${tr.start}.csv` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+function trialRender() {
+  if (!tbox) return;
+  const view = !tr ? trialIntro() : tr.revealed ? trialResults() : trialView === 'handover' ? trialHandover() : trialView === 'plan' ? trialPlan()
+    : trialView === 'confirm' ? trialConfirm() : trialRunning();
+  tbox.replaceChildren(...view);
+  const now = tr && !tr.revealed ? trialNow() : null;
+  trialSig = now ? `${now.elapsed}|${now.due}` : '';
+}
+trialRender();
+// A new day changes what there is to score: catch it when the page is looked at again, without
+// disturbing a morning's answers that are half filled in.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !tr || tr.revealed || trialView) return;
+  const now = trialNow();
+  if (`${now.elapsed}|${now.due}` !== trialSig) trialRender();
+});
+
+/* ================================ notices and status ================================ */
+const statusDot = el('i', { class: 'pulse off' }), statusText = document.createTextNode('Waiting for the scanner');
+byId('live').replaceChildren(statusDot, statusText);
+function renderStatus(d) {
+  let text, live = false;
+  if (!d) text = 'Waiting for the scanner';
+  else if (ui.stale) text = 'Scanner not answering';
+  else {
+    live = true;
+    const ago = t => Math.max(0, Math.round(d.now - t));
+    const parts = ['Live'];
+    if (d.wifi && d.wifi.scanAt) parts.push(ago(d.wifi.scanAt) > 30 ? 'Wi-Fi restarting' : `Wi-Fi ${ago(d.wifi.scanAt)}s`);
+    if (d.ble && d.ble.state === 'on') parts.push('Bluetooth');
+    if (d.lan && d.lan.scanAt) parts.push(`Network ${ago(d.lan.scanAt)}s`);
+    text = innerWidth < 640 ? parts[0] : parts.join(' · ');   // a phone-width bar has room for one word
+  }
+  statusDot.className = 'pulse' + (live ? '' : ' off');
+  if (statusText.data !== text) statusText.data = text;
+}
+function renderNotices(m) {
+  const d = m.st, notes = [], perms = [];
+  const bs = (d.ble || {}).state, bp = (d.ble || {}).permission;
+  const lanBlocked = !!(d.lan && d.lan.blocked);
+  // The three things macOS asks the user to allow, gathered into one notice.
+  if (m.redacted) perms.push(['Location Services', 'reveals Wi-Fi names; until then your own router’s other band is drawn as a neighbour.']);
+  if (bs === 'unauthorized' || bp === 'denied' || (bs !== 'on' && bs !== 'off' && bp === 'notDetermined')) perms.push(['Bluetooth', 'counts the Bluetooth devices nearby.']);
+  if (lanBlocked) perms.push(['Local Network', 'lists the TV, cameras and phones on your Wi-Fi.']);
+  if (d.wifi && d.wifi.error) notes.push(['Wi-Fi', d.wifi.error]);
+  if (bs === 'off') notes.push(['Bluetooth is off', 'Turn Bluetooth on for this Mac to count nearby Bluetooth devices.']);
+  if (bs === 'unsupported') notes.push(['Bluetooth', 'This Mac does not offer Bluetooth Low Energy scanning.']);
+  section('notices', [perms, notes], () => {
+    const out = notes.map(([title, text]) => el('div', { class: 'notice' }, el('b', { text: title }), el('span', { text })));
+    if (perms.length) {
+      out.unshift(el('div', { class: 'notice' }, el('b', { text: 'macOS is holding back' }),
+        el('span', null, perms.map(([name, why], k) => [k ? ' ' : '', el('strong', { text: name }), ` ${why}`]),
+          ' Choose Allow on the prompt from Signal Scan, or switch it on under System Settings › Privacy & Security.')));
+    }
+    return out;
+  });
+}
+
+/* ================================ polling ================================ */
+const ui = { data: null, stale: false, asking: false, airBusy: false };
+function render() {
+  document.body.classList.toggle('stale', ui.stale);
+  renderStatus(ui.data);
+  if (!ui.data) return;
+  const m = derive(ui.data);
+  renderNotices(m);
+  field.link = m.iface.associated && Number.isFinite(m.iface.rssi) ? m.iface.rssi : null;
+  const model = liveModel(m);
+  for (const d of heardDevices(m, true)) {
+    model.signals.push({ id: 'd:' + d.mac, cat: 'lan', connected: false, name: d.name, rssi: d.rssi, band: d.band || 2, updates: null,
+                         detail: [d.channel ? `Channel ${d.channel}` : null, BAND[d.band], `heard at ${clock(d.at)}`].filter(Boolean).join(' · ') });
+  }
+  fieldUpdate(model);
+  seatUpdate(m);
+  spectrumUpdate(m);
+  channelsUpdate(m);
+  registerUpdate(m);
+  bodyUpdate(m);
+}
+async function poll() {
+  try {
+    const res = await fetch('/api/state', { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    ui.data = await res.json();
+    ui.stale = false;
+  } catch (e) {
+    ui.stale = true;
+  }
+  render();
+}
+
+// Film grain, made once.
+(() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 140;
+  const x = c.getContext('2d'), img = x.createImageData(140, 140);
+  for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+  x.putImageData(img, 0, 0);
+  document.documentElement.style.setProperty('--grain', `url(${c.toDataURL()})`);
+})();
+
+// The masthead follows the chapter on screen.
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.nav a')];
+  const spy = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.dataset.for === e.target.id));
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  for (const id of ['field', 'seat', 'spectrum', 'channels', 'register', 'body']) spy.observe(byId(id));
+}
+if ('ResizeObserver' in window) {
+  new ResizeObserver(() => {
+    hudBoxes(); moveInk();
+    wake(fieldLoop); wake(ladderLoop); wake(doseLoop);
+    for (const sp of spectra.values()) wake(sp.loop);
+  }).observe(document.body);
+}
+wake(fieldLoop);
+
+// Each read of /api/state tells the app someone is looking, and the app only scans while someone
+// is, because a Wi-Fi scan slows this Mac's own connection for a few seconds. So ask only while
+// this tab is actually showing.
+const tick = () => { if (!document.hidden) poll(); };
+document.addEventListener('visibilitychange', tick);
+tick();
+setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
